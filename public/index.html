@@ -1,0 +1,55 @@
+<!doctype html>
+<html>
+  <head>
+	<link rel="stylesheet" href="main.css">
+    <title>Rook</title>
+
+  </head>
+  <body>
+
+	
+	<script src="/socket.io/socket.io.js"></script>
+	<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+	<script src="main.js"></script>
+	
+	
+	
+	<div id="join_lobby_div">
+	
+		<h1>Rook</h1>
+		
+		<form id="join_lobby" action="">
+			<label class="username" for="name_input">Enter Your Name</label>
+			<input class="username" id="name_input" type="text"></input>
+			<button class="username" id="name_input_button">Join Lobby</button>
+		</form>
+		
+		<br>
+		<h2 class="lobby" id="games">People in Lobby:</h2>
+		<br>
+		
+		<div id="users_div">
+		</div>
+		
+		
+		<br>
+		<button id="start_game" class="lobby">Start Game</button>
+		<label for="start_game" id="start_game_label"></label>
+		
+	</div>
+
+	
+	
+	<div id="messaging_div">
+		
+		<ul class="messaging" id="messages"></ul>
+		
+	
+		<form class="messaging" id="send_message" action="">
+			<input id="m" autocomplete="off" /><button>Send</button>
+		</form>
+		
+	</div>
+	
+	</body>
+</html>
