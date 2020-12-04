@@ -9,10 +9,69 @@ var users = [];
 let numUsers = 0;
 
 // Routing
-app.use(express.static(path.join(__dirname, 'public')));
+//trying a class
+const suits = ["red", "yellow", "black", "green"];
+const values = ["1","5","6","7","8","9","10","11","12","13","14"];
+class Card{
+	constructor(suit,value){
+		this.suit = suit;
+		this.value = value;
+	}
+}
+//console.log(new Card("red","1").value);
+class Deck{
+	constructor(suits, values){
+		this.cards = new Array();
+	
+		for(var i = 0; i < suits.length; i++)
+		{
+			for(var x = 0; x < values.length; x++)
+			{
+				var card = {Value: values[x], Suit: suits[i]};
+				this.cards.push(new Card(values[x],suits[i]));
+			}
+		}
+	
+		this.cards.push(new Card("rook","rook"));
 
-var suits = ["red", "yellow", "black", "green"];
-var values = ["1","5","6","7","8","9","10","11","12","13","14"];
+		
+	}
+	shuffle(){
+		for (var i = 0; i < 1000; i++)
+		{
+			var location1 = Math.floor((Math.random() * this.cards.length));
+			var location2 = Math.floor((Math.random() * this.cards.length));
+			var tmp = this.cards[location1];
+
+			this.cards[location1] = this.cards[location2];
+			this.cards[location2] = tmp;
+		}
+	}
+}
+// console.log("unshuffled");
+// var deck = new Deck(suits,values);
+// console.dir(deck);
+// console.log("shuffled:");
+// deck.shuffle();
+// console.dir(deck);
+
+class Player{
+	constructor(username, hand, won, dealer){
+		this.username = username; //string
+		this.hand = hand;// vector of cards
+		this.won = won; //bolean
+		this.dealer = dealer; //boolean
+	}
+}
+class Game{
+	constructor(kitty, bid, players){
+		this.kitty = kitty;
+		this.bid = bid;
+		this.players = players;
+	}
+}
+//end class test
+app.use(express.static(path.join(__dirname, 'public')));
 
 var kitty = [];
 
@@ -24,38 +83,38 @@ function createPlayers(users){
 	}
 }
 
-function createDeck(){
-	var deck = new Array();
+// function createDeck(){
+// 	var deck = new Array();
 	
-	for(var i = 0; i < suits.length; i++)
-	{
-		for(var x = 0; x < values.length; x++)
-		{
-			var card = {Value: values[x], Suit: suits[i]};
-			deck.push(card);
-		}
-	}
+// 	for(var i = 0; i < suits.length; i++)
+// 	{
+// 		for(var x = 0; x < values.length; x++)
+// 		{
+// 			var card = {Value: values[x], Suit: suits[i]};
+// 			deck.push(card);
+// 		}
+// 	}
 	
-	deck.push({Value: 'rook', Suit: 'rook'});
+// 	deck.push({Value: 'rook', Suit: 'rook'});
 
-	return deck;
+// 	return deck;
 	
-}
+// }
 
-function shuffle(deck)
-{
-	// for 1000 turns
-	// switch the values of two random cards
-	for (var i = 0; i < 1000; i++)
-	{
-		var location1 = Math.floor((Math.random() * deck.length));
-		var location2 = Math.floor((Math.random() * deck.length));
-		var tmp = deck[location1];
+// function shuffle(deck)
+// {
+// 	// for 1000 turns
+// 	// switch the values of two random cards
+// 	for (var i = 0; i < 1000; i++)
+// 	{
+// 		var location1 = Math.floor((Math.random() * deck.length));
+// 		var location2 = Math.floor((Math.random() * deck.length));
+// 		var tmp = deck[location1];
 
-		deck[location1] = deck[location2];
-		deck[location2] = tmp;
-	}
-}
+// 		deck[location1] = deck[location2];
+// 		deck[location2] = tmp;
+// 	}
+// }
 
 function deal(deck, players){
 	playerNum = 0;
@@ -73,7 +132,7 @@ function deal(deck, players){
 	
 	}
 	
-	console.log(kitty);
+	// console.log(kitty);
 	
 }
 
@@ -83,19 +142,6 @@ function deal(deck, players){
 //deal(deck, ["matthew", "michael", "kristi"]);
 
 //console.dir(deck);
-
-function Player(username, hand, won, dealer){
-	this.username = username;
-	this.hand = hand;
-	this.won = won;
-	this.dealer = dealer;
-}
-
-function Game(kitty, bid, players){
-	this.kitty = kitty;
-	this.bid = bid;
-	this.players = players;
-}
 
 io.on('connection', (socket) => {
 	let addedUser = false;
