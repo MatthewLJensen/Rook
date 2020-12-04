@@ -13,6 +13,12 @@ $(function () {
 		
 	});
 
+	$('#start_game').click(function(){
+			//Tell the server to setup/start the game
+			socket.emit('start game');
+		
+	});
+
 	socket.on('name accepted', function(data){
 		console.dir("Name accepted");
 
@@ -56,7 +62,72 @@ $(function () {
 		console.dir(data);
 	});
 	
+
+	socket.on('start bidding', function(data){
+		var player = data.player;
+		var order = data.order;
+		console.log("player info coming in");
+		console.dir(player);
+		console.dir(order);
+
+		//$('#cards').append($('<li>').text(msg));
+		display_cards(player.hand);
+	});
 	
+
+	const display_opponents = (order, myPosition) => {
+		var opponents = document.getElementById('opponent')
+
+
+		var list = document.createElement('ul');
+		list.setAttribute("id", "opponents_ul");
+		
+	    for (var i = 0; i < cards.length; i++) {
+			
+			if (i != myPosition){//prevents you from getting added to the list of other players
+
+				// Create the list item:
+				var item = document.createElement('li');
+				item.setAttribute("id", "opponents_li");
+
+				// Set its contents:
+				item.appendChild(document.createTextNode(order[i].username));
+
+				// Add it to the list:
+				list.appendChild(item);
+
+			}
+		}
+
+		opponents.appendChild(list);
+
+
+	}
+
+	const display_cards = (cards) => {
+		var cards_div = document.getElementById('cards_div');
+		cards_div.innerHTML = "";
+		
+		
+		var list = document.createElement('ul');
+		list.setAttribute("id", "cards_ul");
+		
+	    for (var i = 0; i < cards.length; i++) {
+			
+			// Create the list item:
+			var item = document.createElement('li');
+			item.setAttribute("id", "cards_li");
+
+			// Set its contents:
+			item.appendChild(document.createTextNode(cards[i].value + " " + cards[i].suit));
+
+			// Add it to the list:
+			list.appendChild(item);			
+		}
+
+		cards_div.appendChild(list);
+
+	}
 
 	
 	  // Updates users list
@@ -74,7 +145,7 @@ $(function () {
 			var item = document.createElement('li');
 
 			// Set its contents:
-			item.appendChild(document.createTextNode(users[i]));
+			item.appendChild(document.createTextNode(users[i].username));
 
 			// Add it to the list:
 			list.appendChild(item);			
