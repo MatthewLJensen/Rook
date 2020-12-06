@@ -306,35 +306,40 @@ io.on('connection', (socket) => {
 	socket.on('bid', (bid) => {
 		//setup passed
 		
-		if(socket.id == game.players[game.turn].sid && game.players[game.turn].bid != "pass"){
-			//checkplayerpassed(player)
-			var biddingEnded = false;
-			
+		if (bid != "pass"){
+			bid = parseInt(bid);
+		}
 
-				if((bid >= 80 && bid >= (game.currentBid + 5)) || bid == "pass"){
-					
+		if(socket.id == game.players[game.turn].sid && game.players[game.turn].bid != "pass"){
+			var biddingEnded = false;
+
+
+				if((bid >= 80 && bid >= (game.currentBid + 5) && bid <= 200) || bid === "pass" || bid == 400){
+
+
 					if(bid === 'pass'){
 						console.log("player has passed");
 						game.players[game.turn].passed = true;
 						game.players[game.turn].bid = "pass";
 						game.passed.push(game.players[game.turn].username);
 						
+						// This checks to see if everyone has passed. If so, it ends the bidding.
 						if (game.passed.length == (game.players.length - 1)){ //potential problems: What if every passes on the first round? Does the last player get the bid for 80?
 							console.log("bidding has ended");
 							biddingEnded = true;
 							
-							io.emit('bidding ended', {
-								currentBid: game.currentBid,
-								highestBidder: game.highestBidder.username,
-							});
-							
 						}
 						
 					}else{
+						if(bid == 400){
+							biddingEnded = true;
+						}
+
 						game.players[game.turn].bid = bid;
 						game.highestBidder = game.players[game.turn];
 						game.currentBid = bid;
 					}
+
 					game.nextTurn();
 					
 					if (!biddingEnded){
@@ -353,6 +358,16 @@ io.on('connection', (socket) => {
 							order: game.order(),
 							passed: game.passed
 						});
+					}else{
+
+						io.emit('bidding ended', {
+							currentBid: game.currentBid,
+							highestBidder: game.highestBidder.username,
+						});
+						io.to(game.highestBidder.sid).emit('kitty contents',game.kitty);
+
+						
+
 					}
 					
 				}else{
@@ -374,7 +389,19 @@ io.on('connection', (socket) => {
 			io.to(socket.id).emit('not your turn');
 		}
 	});
-	
+	socket.on('new kitty',(newkitty) =>{
+		if(newkitty.length == game.kitty.length){
+			game.kitty = newkitty;
+			for(var i = 0; i < game.kitty.length; i++){
+				if(game.kitty[i].value == 1 || game.kitty[i].value == 14 || game.kitty[i].value == 5 ||game.kitty[i].value == 10 || game.kitty.value[i] == 'rook' ){
+					io.emit('points in kitty');
+					break;
+				}
+			}
+			io.emit('no points in kitty');
+		}
+		else{io.to(game.highestBidder.sid).emit('too few or too many cards in kitty');}
+	})
 
 
 	socket.on('chat message', (msg) => {

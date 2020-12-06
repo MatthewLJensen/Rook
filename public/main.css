@@ -77,11 +77,29 @@
 	list-style: none;
 }
 
-#cards_li{
+.cards_li{
 	display: inline;
 	padding: 20px
 }
 
+.cards_li_clicked{
+	display: inline;
+	padding: 20px;
+	border-style: solid;
+	border-color: blue;
+}
+
+a {
+	color: black;
+}
+
+a:link {
+	text-decoration: none;
+}
+
+a:hover{
+	cursor: pointer;
+}
 
 
 

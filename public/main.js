@@ -4,6 +4,7 @@ Edited by Matthew on December 2, 2020
 $(function () {
 	var socket = io();
 	var username;
+	var player;
 	
 
 	$('#join_lobby').submit(function(e){
@@ -36,11 +37,32 @@ $(function () {
 				socket.emit('bid', bid);
 				
 			}
-			
-			
-			
-		
 	});
+
+
+	//$('.cards_li').trigger('click');
+
+	$(document).on('click', '.cards_li', function() {
+		console.log("selecting card");
+		var clickedCardID = $(this).attr('id');
+		$(clickedCardID).attr('class', 'cards_li_clicked');
+	});
+
+	
+	// $(document).ready(function() {
+	// 	console.log("ready");
+	// 	$(".cards_li a").click(function(event){
+	// 		console.log("selecting card");
+	// 		var clickedCardID = $(this).attr('id');
+	// 		$(clickedCardID).attr('class', 'cards_li_clicked');
+	// 	});
+
+	// });
+
+	//selecting cards
+
+
+
 
 	socket.on('name accepted', function(data){
 		console.dir("Name accepted");
@@ -93,7 +115,7 @@ $(function () {
 		
 		
 		console.dir(data);
-		var player = data.player;
+		player = data.player;
 		var order = data.order;
 		console.log("player info coming in");
 		console.dir(player);
@@ -142,6 +164,26 @@ $(function () {
 		$('#opponents').children('div').each(function () {
 			$(this).children().first().css("font-weight","");
 		});
+		
+		
+	});
+
+	socket.on('kitty contents', function(kitty){
+		console.log("receiving kitty");
+		
+		for (var i=0; i < kitty.length; i++){
+			player.hand.push(kitty[i]);
+		}
+
+		console.dir(kitty)
+		console.dir(player.hand)
+
+		display_cards(player.hand);
+
+		//Tell user to choose cards to send back
+		var announcement = document.getElementById("instructions");
+		announcement.innerHTML = "Choose " + kitty.length + " cards to send back";
+		
 		
 		
 	});
@@ -234,10 +276,19 @@ $(function () {
 			
 			// Create the list item:
 			var item = document.createElement('li');
-			item.setAttribute("id", "cards_li");
+			item.setAttribute("class", "cards_li");
+			item.setAttribute("id", cards[i].value + " " + cards[i].suit);
 
-			// Set its contents:
-			item.appendChild(document.createTextNode(cards[i].value + " " + cards[i].suit));
+			var link = document.createElement('a');
+			link.setAttribute('href', '#');
+			link.setAttribute('id', 'cards[i].value + " " + cards[i].suit');
+			
+
+			// Set link contents:
+			link.appendChild(document.createTextNode(cards[i].value + " " + cards[i].suit));
+
+			//set li contents
+			item.appendChild(link);
 
 			// Add it to the list:
 			list.appendChild(item);			
