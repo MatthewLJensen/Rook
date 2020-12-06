@@ -12,19 +12,20 @@
 	<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
 	<script src="main.js"></script>
 	
-	
+	<h1>Rook</h1>
 	
 	<div id="join_lobby_div">
 	
-		<h1>Rook</h1>
-		
 		<form id="join_lobby" action="">
 			<label class="username" for="name_input">Enter Your Name</label>
 			<input class="username" id="name_input" type="text"></input>
 			<button class="username" id="name_input_button">Join Lobby</button>
 		</form>
 		
-		<br>
+	</div>
+	
+
+	<div id="lobby" class="lobby">
 		<h2 class="lobby" id="games">People in Lobby:</h2>
 		<br>
 		
@@ -35,15 +36,36 @@
 		<br>
 		<button id="start_game" class="lobby">Start Game</button>
 		<label for="start_game" id="start_game_label"></label>
-		
+	
 	</div>
 
 
 	<!-- Div for Playing Area -->
-	<div id="playing_area">
+	<div id="playing_area" class="playing_area">
 
 		<div id="opponents">
 
+		</div>
+
+		<div id="center_play_area">
+		
+			<div id="kitty">
+				<p>Kitty</p>
+			</div>
+			
+			<div id="card_pile">
+			</div>
+			
+			<div id="announcements_div">
+				<p id="announcements"></p>
+				<div id="bidding_div">
+					<input id="bid_input"></input>
+					<label for="bid_input"></label>
+					<button id="bid_action">Bid</button>
+				</div>
+			</div>
+		
+		
 		</div>
 
 		<div id="cards_div">

@@ -30,9 +30,48 @@
 
 
 
+.playing_area {
+	display: none;
+	width: 100%;
+	margin: auto;
+}
+
+
+
+
+/*Opponents CSS*/
+#opponents{
+	display: flex;
+	justify-content: space-evenly;
+	padding: 50px;
+}
+
+#opponents_div{
+	list-style: none;
+}
+
+#opponents_li{
+	display: inline;
+}
+
+
+
+
+
+
+/*Center Cards CSS*/
+#center_play_area{
+	display: flex;
+	justify-content: space-evenly;
+	padding: 280px;
+}
+
+
+
 /*Cards CSS*/
 #cards_div{
 	text-align: center;
+	padding: 50px;
 }
 #cards_ul{
 	list-style: none;
@@ -40,20 +79,13 @@
 
 #cards_li{
 	display: inline;
+	padding: 20px
 }
 
 
-/*Cards CSS*/
-#opponents{
-	text-align: center;
-}
-#opponents_ul{
-	list-style: none;
-}
 
-#opponents_li{
-	display: inline;
-}
+
+
 
 
 

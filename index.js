@@ -4,7 +4,6 @@ const path = require('path');
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
 var users = [];
-var passed = [];
 const suits = ["red", "yellow", "black", "green"];
 const values = ["1","5","6","7","8","9","10","11","12","13","14"];
 var game;
@@ -88,8 +87,10 @@ class Player{
 		this.sid = sid;
 		this.username = username;
 		this.hand = []; //string
+		this.bid = 0;
 		//this.hand = hand;// vector of cards
 		//this.won = won; //array of cards
+		this.passed = false;
 	}
 	won(wonparam){
 		for(var i = 0; i < wonparam.length; i++){
@@ -117,7 +118,10 @@ class Game{
 		this.deck = new Deck(suits,values);
 		this.kitty = [];
 		this.turn = 0;
-		this.highestbidder = 0;
+		this.highestBidder = 0;
+		this.currentBid = 0;
+		this.bidding = true;
+		this.passed = [];
 		
 	}
 	
@@ -170,32 +174,41 @@ class Game{
 	}
 
 	order(){
-		playerOrder = []
+		var playerOrder = [];
 		for (var i = 0; i < this.players.length; i++){
 			playerOrder.push(new hiddenPlayer(this.players[i].username, this.players[i].turnnum));
 		}
 		return playerOrder;
 	}
 	
-}
+	nextTurn(){
+		if (this.bidding){
+						
+			if (this.turn > (this.players.length - 2)){
+				this.turn = 0;
+			}else{
+				this.turn++;
+			}
 
-function setuppassed(gameinstance){
-	passed = new Array(gameinstance.players.length);
-	for(var i = 0; i < gameinstance.players.length; i++){
-		passed[i] = 0;
-	}
-}
-// function checkplayerpassed(player){
-// 	id = player.id;
-// 	for(i = 0; i <  )
-// }
-function checkallpassed(){
-	for(var i = 0; i < passed.length; i++){
-		if(passed[i] == 0){
-			return 0;
+			
+		}else{
+			
+			if (this.turn > (this.players.length - 2)){
+				this.turn = 0;
+			}else{
+				this.turn++;
+			}
 		}
 	}
-	return 1;
+	
+	newRound(){
+		//reset hand
+		//deal/new kitty
+		//reset passed bid
+		
+		
+	}
+	
 }
 
 
@@ -280,65 +293,84 @@ io.on('connection', (socket) => {
 		//send data back to clients
 		for(var i = 0; i < game.players.length; i++){
 			console.log(game.players[i].sid);
+			console.dir(game.order);
+			
 			io.to(game.players[i].sid).emit('start bidding', {
 				player: game.players[i], 
-				order: game.order
+				order: game.order()
 			});
 		}
-		setuppassed(game);
 		
 	});
+	
 	socket.on('bid', (bid) => {
 		//setup passed
 		
-		if(socket.id == game.players[game.turn]){
+		if(socket.id == game.players[game.turn].sid && game.players[game.turn].bid != "pass"){
 			//checkplayerpassed(player)
-			if(game.highestbidder == 0){
-				if(bid >= 80){
-					game.players[game.turn].bid = bid;
-					game.highestbidder = game.players[game.turn];
-					game.turn++;
-				}
-				else if(bid === 'pass'){
-					io.to(socket.id).emit('bid too low');
-				}
-				else{
-					io.to(socket.id).emit('bid too low');
-				}
-			}
-			else{
-				if(bid >= game.highestbidder.bid + 5){
-					game.player[game.turn].bid = bid;
-					game.highestbidder = game.players[game.turn];
-					game.turn++;
-					while(passed[game.turn] == 1){
-						game.turn++;
-					}
-				}
-				else if(bid === 'pass'){
-					passed[game.turn] = 1;
-					game.turn++;
-					if(checkallpassed() == 1){
-						// check if highest bidder
-						for(var i = 0; i < game.players; i++){
-							if(game.highestbidder.id === game.players[i].id){
-								io.to(game.highestbidder.id).emit('settings for highest bidder');
-							}
-							else{
-								io.to(game.player[i].id).emit('wait on highest bidder');
-							}
+			var biddingEnded = false;
+			
+
+				if((bid >= 80 && bid >= (game.currentBid + 5)) || bid == "pass"){
+					
+					if(bid === 'pass'){
+						console.log("player has passed");
+						game.players[game.turn].passed = true;
+						game.players[game.turn].bid = "pass";
+						game.passed.push(game.players[game.turn].username);
+						
+						if (game.passed.length == (game.players.length - 1)){ //potential problems: What if every passes on the first round? Does the last player get the bid for 80?
+							console.log("bidding has ended");
+							biddingEnded = true;
+							
+							io.emit('bidding ended', {
+								currentBid: game.currentBid,
+								highestBidder: game.highestBidder.username,
+							});
+							
 						}
-						passed = [];
+						
+					}else{
+						game.players[game.turn].bid = bid;
+						game.highestBidder = game.players[game.turn];
+						game.currentBid = bid;
 					}
-				}
-				else{
+					game.nextTurn();
+					
+					if (!biddingEnded){
+						//send bid to other players as long as the bid process is still in progress
+						
+						while(game.players[game.turn].passed){//This skips passed people
+					
+							game.nextTurn()
+					
+						}
+						
+						io.emit('bid placed', {
+							currentBid: game.currentBid,
+							highestBidder: game.highestBidder.username,
+							turn: game.turn,
+							order: game.order(),
+							passed: game.passed
+						});
+					}
+					
+				}else{
+					console.log("bid too low, telling user to try again");
 					io.to(socket.id).emit('bid too low');
+					
 				}
-			}
+				
+
+
+			
+	
+			
 			
 			
 		}
 		else{
+			console.log("a player has tried to play out of turn");
 			io.to(socket.id).emit('not your turn');
 		}
 	});
