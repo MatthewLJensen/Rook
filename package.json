@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "my first socket.io app",
   "dependencies": {
-    "socket.io": "^3.0.3"
+    "socket.io": "^3.0.3",
+    "sortablejs": "^1.12.0"
   }
 }

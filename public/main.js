@@ -382,29 +382,35 @@ $(function () {
 		var list = document.createElement('ul');
 		list.setAttribute("id", "cards_ul");
 		
+
 	    for (var i = 0; i < cards.length; i++) {
 			
 			// Create the list item:
 			var item = document.createElement('li');
 			item.setAttribute("class", "cards_li");
 			item.setAttribute("id", cards[i].value + " " + cards[i].suit);
+			item.draggable = true;
 
-			var link = document.createElement('a');
-			link.setAttribute('href', '#');
+			//var link = document.createElement('a');
+			//link.setAttribute('href', '#');
 			//link.setAttribute('id', 'cards[i].value + " " + cards[i].suit');
 			
 
 			// Set link contents:
-			link.appendChild(document.createTextNode(cards[i].value + " " + cards[i].suit));
+			//link.appendChild(document.createTextNode(cards[i].value + " " + cards[i].suit));
+			item.appendChild(document.createTextNode(cards[i].value + " " + cards[i].suit));
 
 			//set li contents
-			item.appendChild(link);
+			//item.appendChild(link);
 
 			// Add it to the list:
 			list.appendChild(item);			
 		}
 
 		cards_div.appendChild(list);
+
+
+		var sortable = Sortable.create(cards_ul);
 
 	}
 
