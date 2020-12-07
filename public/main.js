@@ -5,7 +5,10 @@ $(function () {
 	var socket = io();
 	var username;
 	var player;
-	
+	var numCardsSelected = 0;
+	var selectingKitty = false;
+	var kittyLength = 0;
+	var numPlayers = 0;
 
 	$('#join_lobby').submit(function(e){
 		e.preventDefault(); // prevents page reloading
@@ -40,29 +43,85 @@ $(function () {
 	});
 
 
-	//$('.cards_li').trigger('click');
 
-	$(document).on('click', '.cards_li', function() {
-		console.log("selecting card");
-		var clickedCardID = $(this).attr('id');
-		$(clickedCardID).attr('class', 'cards_li_clicked');
+	$(document).on('click', '.cards_li, .cards_li_selected', function() {
+		
+		var selectedCardID = $(this).attr('id');
+		var selectedCard = document.getElementById(selectedCardID);
+
+		
+		if (selectedCard.classList.contains('cards_li')){ //clicking an unselected card
+			console.log("selecting card");
+			selectedCard.classList.add('cards_li_selected');
+			selectedCard.classList.remove('cards_li');
+			numCardsSelected++;
+		}else{//clicking an selected card
+			console.log("deselecting card");
+			selectedCard.classList.add('cards_li');
+			selectedCard.classList.remove('cards_li_selected');
+			numCardsSelected--;
+		}
+
+		if (selectingKitty){
+			var announcement = document.getElementById("instructions");
+			announcement.innerHTML = "Choose " + kittyLength + " cards to send back. (" + numCardsSelected + " out of " + kittyLength + ")";
+		}
+
+		if (selectingKitty && numCardsSelected == kittyLength && document.getElementById("partner_input").value != ""){
+			$('#kitty_submit').prop("disabled",false);
+		}else{
+			$('#kitty_submit').prop("disabled",true);
+		}
+		
 	});
 
-	
-	// $(document).ready(function() {
-	// 	console.log("ready");
-	// 	$(".cards_li a").click(function(event){
-	// 		console.log("selecting card");
-	// 		var clickedCardID = $(this).attr('id');
-	// 		$(clickedCardID).attr('class', 'cards_li_clicked');
-	// 	});
-
-	// });
-
-	//selecting cards
+	$('#partner_input').on('input', function() {
+		if (selectingKitty && numCardsSelected == kittyLength && document.getElementById("partner_input").value != ""){
+			$('#kitty_submit').prop("disabled",false);
+		}else{
+			$('#kitty_submit').prop("disabled",true);
+		}
+	});
 
 
+	$('#submit_kitty').submit(function(e){
+		e.preventDefault(); // prevents page reloading
+			console.log("submitting kitty");
 
+			//username = $('#name_input').val().trim();
+			//socket.emit('add user', username);
+			
+			//gets new kitty
+			var kitty = [];
+			$('#cards_ul').children('li').each(function () {
+				if ($(this).attr('class') == 'cards_li_selected'){
+					var cardArray = $(this).attr('id').split(' ');
+					var value = cardArray[0];
+					var suit = cardArray[1];
+					kitty.push({
+						value: value,
+						suit: suit
+					})	
+				}				
+			});
+
+			//gets partner
+			var partnerArray = document.getElementById("partner_input").value.split(" ");
+
+			var partner = {
+				value: partnerArray[0],
+				suit: partnerArray[1]
+			}
+
+			console.dir(kitty);
+			console.dir(partner);
+
+			socket.emit('new kitty', kitty);
+
+			socket.emit('partner', partner);
+			
+		
+	});
 
 	socket.on('name accepted', function(data){
 		console.dir("Name accepted");
@@ -74,7 +133,7 @@ $(function () {
 			$('.messaging').show();
 		}
 		
-		});
+	});
 	
 	
 	socket.on('name in use', function(data){
@@ -113,6 +172,8 @@ $(function () {
 		$('.lobby').hide();
 		$('.playing_area').show();
 		
+		//set global variable for total number of players
+		numPlayers = data.order.length;
 		
 		console.dir(data);
 		player = data.player;
@@ -171,6 +232,9 @@ $(function () {
 	socket.on('kitty contents', function(kitty){
 		console.log("receiving kitty");
 		
+		kittyLength = kitty.length;
+		selectingKitty = true;
+
 		for (var i=0; i < kitty.length; i++){
 			player.hand.push(kitty[i]);
 		}
@@ -184,10 +248,56 @@ $(function () {
 		var announcement = document.getElementById("instructions");
 		announcement.innerHTML = "Choose " + kitty.length + " cards to send back";
 		
-		
+		$('#kitty_selection').show();
+
+		//This next section handles choosing 0-2 partners
+		var numPartners = (Math.floor(numPlayers/2) - 1);
+		var partner_inputs_div = document.getElementById("partner_inputs");
+		for (var i = 0; i < numPartners; i++){
+
+			// Create input:
+			var input = document.createElement('input');
+			input.setAttribute("id", "partner_input" + i);
+
+			// Create label
+			var label = document.createElement('label');
+			label.setAttribute("for", "partner_input" + i);
+			label.innerHTML = "Call partner " + i;
+
+
+				
+			// Add inputs and label to div
+			partner_inputs_div.appendChild(input);
+			partner_inputs_div.appendChild(label);
+		}
 		
 	});
 	
+	socket.on('too few or too many cards in kitty', function(){
+		console.log("too few or too many cards in kitty");
+	});
+
+	socket.on('points in kitty', function(){
+		console.log("There are points in the kitty");
+		document.getElementById("kitty_points_p").innerHTML = "(There are points)";
+	});
+
+	socket.on('no points in kitty', function(){
+		console.log("There are no points in the kitty");
+		document.getElementById("kitty_points_p").innerHTML = "(There are no points)";
+	});
+	
+	
+	socket.on('new hand', function(newPlayer){
+		player = newPlayer; //sets local player var to the latest specs
+
+		console.log("receiving new hand");
+		
+		display_cards(player.hand);
+
+		$('#kitty_selection').hide();
+		
+	});
 	
 	const update_bidder = (order, myUsername, turn) => {
 		
@@ -281,7 +391,7 @@ $(function () {
 
 			var link = document.createElement('a');
 			link.setAttribute('href', '#');
-			link.setAttribute('id', 'cards[i].value + " " + cards[i].suit');
+			//link.setAttribute('id', 'cards[i].value + " " + cards[i].suit');
 			
 
 			// Set link contents:

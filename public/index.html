@@ -51,6 +51,7 @@
 		
 			<div id="kitty">
 				<p>Kitty</p>
+				<p id="kitty_points_p">(There may or may not be points)</p>
 			</div>
 			
 			<div id="card_pile">
@@ -58,7 +59,29 @@
 			
 			<div id="announcements_div">
 				<p id="announcements"></p>
-				<p id="instructions"></p>
+
+				<div id="kitty_selection">
+					<p id="instructions"></p>
+					<form id="submit_kitty" action="">
+
+						<label for="trump_input">Choose trump:</label>
+						<select id="partner_input">
+							<option value="red">Red</option>
+							<option value="yellow">Yellow</option>
+							<option value="black">Black</option>
+							<option value="green">Green</option>
+						</select>
+
+						<div id="partner_inputs">
+
+						</div>
+
+						<button id="kitty_submit" disabled>Submit Kitty and Call Partner</button>
+
+					</form>
+				</div>
+				
+				
 				<div id="bidding_div">
 					<input id="bid_input"></input>
 					<label for="bid_input"></label>

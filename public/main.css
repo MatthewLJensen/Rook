@@ -82,7 +82,7 @@
 	padding: 20px
 }
 
-.cards_li_clicked{
+.cards_li_selected{
 	display: inline;
 	padding: 20px;
 	border-style: solid;
@@ -136,4 +136,7 @@ ul {
 {
 	display: none;
 }
-    
+	
+#kitty_selection {
+	display: none;
+}

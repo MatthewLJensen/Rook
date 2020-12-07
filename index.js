@@ -122,6 +122,7 @@ class Game{
 		this.currentBid = 0;
 		this.bidding = true;
 		this.passed = [];
+		this.trump = 0;
 		
 	}
 	
@@ -154,10 +155,10 @@ class Game{
 			if (this.players.length == 3 && this.kitty.length < 6){
 				this.kitty.push(this.deck.cards[i])
 			}
-			else if ((this.players.length == 4 || this.players.length == 5) && this.kitty.length < 6){
+			else if ((this.players.length == 4 || this.players.length == 5) && this.kitty.length < 5){
 				this.kitty.push(this.deck.cards[i])
 			}
-			else if (this.players.length == 6 && this.kitty.length < 4){
+			else if (this.players.length == 6 && this.kitty.length < 3){
 				this.kitty.push(this.deck.cards[i])
 			}
 			else{
@@ -251,7 +252,17 @@ io.on('connection', (socket) => {
 	socket.on('add user', (username) => {
 		if (addedUser) return;
 
-		if (users.includes(username)){
+		var nameInUse = false;
+
+		for (var i = 0; i < users.length; i++){
+			if (users[i].username == username){
+				console.log("name in use");
+				nameInUse = true;
+				//potentially alert user about this
+			}
+		}
+
+		if (nameInUse){
 			
 			socket.emit('name in use', {
 			});
@@ -364,7 +375,14 @@ io.on('connection', (socket) => {
 							currentBid: game.currentBid,
 							highestBidder: game.highestBidder.username,
 						});
-						io.to(game.highestBidder.sid).emit('kitty contents',game.kitty);
+
+						//add kitty to winner hand
+						for (var i = 0; i < game.kitty.length; i++){
+							game.highestBidder.hand.push(game.kitty[i]);
+						}
+
+						//send new hand
+						io.to(game.highestBidder.sid).emit('kitty contents', game.kitty);
 
 						
 
@@ -375,30 +393,46 @@ io.on('connection', (socket) => {
 					io.to(socket.id).emit('bid too low');
 					
 				}
-				
-
-
-			
 	
-			
-			
-			
 		}
 		else{
 			console.log("a player has tried to play out of turn");
 			io.to(socket.id).emit('not your turn');
 		}
 	});
-	socket.on('new kitty',(newkitty) =>{
-		if(newkitty.length == game.kitty.length){
-			game.kitty = newkitty;
+
+
+	socket.on('new kitty',(newKitty) =>{
+		var pointsInKitty = false;
+		if(newKitty.length == game.kitty.length){
+			game.kitty = newKitty;
+
+			//remove kitty from winner hand
+			for (var i = 0; i < game.kitty.length; i++){
+				var kittyCard = new Card(game.kitty[i].value, game.kitty[i].suit);
+					for (var x = 0; x < game.highestBidder.hand.length; x++){
+						if (kittyCard.value == game.highestBidder.hand[x].value && kittyCard.suit == game.highestBidder.hand[x].suit){
+							game.highestBidder.hand.splice(x, 1);		
+						}
+					}
+			}
+
+			//send new hand to winner
+			io.to(game.highestBidder.sid).emit('new hand', game.highestBidder);
+
+			//determine if there are points in the kitty
 			for(var i = 0; i < game.kitty.length; i++){
-				if(game.kitty[i].value == 1 || game.kitty[i].value == 14 || game.kitty[i].value == 5 ||game.kitty[i].value == 10 || game.kitty.value[i] == 'rook' ){
-					io.emit('points in kitty');
+				if(game.kitty[i].value == 1 || game.kitty[i].value == 14 || game.kitty[i].value == 5 ||game.kitty[i].value == 10 || game.kitty[i].value == 'rook' ){
+					pointsInKitty = true;
 					break;
 				}
 			}
-			io.emit('no points in kitty');
+			if(pointsInKitty){
+				io.emit('points in kitty');
+			}else{
+				io.emit('no points in kitty');
+			}
+
 		}
 		else{io.to(game.highestBidder.sid).emit('too few or too many cards in kitty');}
 	})
@@ -414,37 +448,3 @@ io.on('connection', (socket) => {
 http.listen(3001, () => {
   console.log('listening on *:3001');
 });
-
-
-// function deal(deck, players){
-// 	playerNum = 0;
-// 	for (var i = 0; i < deck.length; i++){
-
-// 		if (players.length == 3 && kitty.length < 6){
-// 			kitty.push(deck[i])
-// 		}else if ((players.length == 4 || players.length == 5) && kitty.length < 6){
-// 			kitty.push(deck[i])
-// 		}else if (players.length == 6 && kitty.length < 4){
-// 			kitty.push(deck[i])
-// 		}else{
-
-// 			if (playerNum == (players.length - 1)){
-// 				playerNum = 0;
-// 			}
-
-// 			players[playerNum].hand.push(deck[i]);
-// 			playerNum++;
-// 		}
-	
-// 	}
-	
-	
-	
-// }
-
-//deck = createDeck();
-//shuffle(deck);
-
-//deal(deck, ["matthew", "michael", "kristi"]);
-
-//console.dir(deck);
