@@ -123,6 +123,7 @@ class Game{
 		this.bidding = true;
 		this.passed = [];
 		this.trump = 0;
+		this.partnerArray = [];
 		
 	}
 	
@@ -347,7 +348,7 @@ io.on('connection', (socket) => {
 						}
 
 						game.players[game.turn].bid = bid;
-						game.highestBidder = game.players[game.turn];
+						game.highestBidder = game.turn;//game.highestBidder = game.players[game.turn];
 						game.currentBid = bid;
 					}
 
@@ -361,28 +362,29 @@ io.on('connection', (socket) => {
 							game.nextTurn()
 					
 						}
-						
+						//game.highestBidder.username,
 						io.emit('bid placed', {
 							currentBid: game.currentBid,
-							highestBidder: game.highestBidder.username,
+							highestBidder: game.players[game.highestBidder].username,
 							turn: game.turn,
 							order: game.order(),
 							passed: game.passed
 						});
 					}else{
-
+						//game.highestBidder.username
 						io.emit('bidding ended', {
 							currentBid: game.currentBid,
-							highestBidder: game.highestBidder.username,
+							highestBidder: game.players[game.highestBidder].username,
 						});
 
 						//add kitty to winner hand
+						//game.highestBidder.hand.push(game.kitty[i]);
 						for (var i = 0; i < game.kitty.length; i++){
-							game.highestBidder.hand.push(game.kitty[i]);
+							game.players[game.highestBidder].hand.push(game.kitty[i]);
 						}
-
+						//game.highestBidder.sid
 						//send new hand
-						io.to(game.highestBidder.sid).emit('kitty contents', game.kitty);
+						io.to(game.players[game.highestBidder].sid).emit('kitty contents', game.kitty);
 
 						
 
@@ -410,15 +412,15 @@ io.on('connection', (socket) => {
 			//remove kitty from winner hand
 			for (var i = 0; i < game.kitty.length; i++){
 				var kittyCard = new Card(game.kitty[i].value, game.kitty[i].suit);
-					for (var x = 0; x < game.highestBidder.hand.length; x++){
-						if (kittyCard.value == game.highestBidder.hand[x].value && kittyCard.suit == game.highestBidder.hand[x].suit){
-							game.highestBidder.hand.splice(x, 1);		
+					for (var x = 0; x < game.players[game.highestBidder].hand.length; x++){
+						if (kittyCard.value == game.players[game.highestBidder].hand[x].value && kittyCard.suit == game.players[game.highestBidder].hand[x].suit){
+							game.players[game.highestBidder].hand.splice(x, 1);		
 						}
 					}
 			}
 
 			//send new hand to winner
-			io.to(game.highestBidder.sid).emit('new hand', game.highestBidder);
+			io.to(game.players[game.highestBidder].sid).emit('new hand', game.players[game.highestBidder]);
 
 			//determine if there are points in the kitty
 			for(var i = 0; i < game.kitty.length; i++){
@@ -434,9 +436,25 @@ io.on('connection', (socket) => {
 			}
 
 		}
-		else{io.to(game.highestBidder.sid).emit('too few or too many cards in kitty');}
+		else{io.to(game.players[game.highestBidder].sid).emit('too few or too many cards in kitty');}
 	})
 
+
+
+	socket.on('partner', (partnerArray) =>{
+		for (var i = 0; i < partnerArray.length; i++){
+			var partner = new Card(partnerArray[i].value, partnerArray[i].suit);
+			game.partnerArray.push(partner);
+		}
+		console.log("Partners:")
+		console.dir(game.partnerArray)
+	});
+
+	socket.on('trump', (trumpColor) =>{
+		console.dir(trumpColor);
+		game.trump = trumpColor;
+		console.log("Trump Color: " + game.trump);
+	});
 
 	socket.on('chat message', (msg) => {
 		io.emit('chat message', socket.username + ": " + msg);

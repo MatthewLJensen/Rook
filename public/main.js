@@ -44,21 +44,21 @@ $(function () {
 
 
 
-	$(document).on('click', '.cards_li, .cards_li_selected', function() {
+	$(document).on('click', '.card_img, .card_img_selected', function() {
 		
 		var selectedCardID = $(this).attr('id');
 		var selectedCard = document.getElementById(selectedCardID);
 
 		
-		if (selectedCard.classList.contains('cards_li')){ //clicking an unselected card
+		if (selectedCard.classList.contains('card_img')){ //clicking an unselected card
 			console.log("selecting card");
-			selectedCard.classList.add('cards_li_selected');
-			selectedCard.classList.remove('cards_li');
+			selectedCard.classList.add('card_img_selected');
+			selectedCard.classList.remove('card_img');
 			numCardsSelected++;
 		}else{//clicking an selected card
 			console.log("deselecting card");
-			selectedCard.classList.add('cards_li');
-			selectedCard.classList.remove('cards_li_selected');
+			selectedCard.classList.add('card_img');
+			selectedCard.classList.remove('card_img_selected');
 			numCardsSelected--;
 		}
 
@@ -67,7 +67,7 @@ $(function () {
 			announcement.innerHTML = "Choose " + kittyLength + " cards to send back. (" + numCardsSelected + " out of " + kittyLength + ")";
 		}
 
-		if (selectingKitty && numCardsSelected == kittyLength && document.getElementById("partner_input").value != ""){
+		if (selectingKitty && numCardsSelected == kittyLength){
 			$('#kitty_submit').prop("disabled",false);
 		}else{
 			$('#kitty_submit').prop("disabled",true);
@@ -75,14 +75,21 @@ $(function () {
 		
 	});
 
-	$('#partner_input').on('input', function() {
-		if (selectingKitty && numCardsSelected == kittyLength && document.getElementById("partner_input").value != ""){
-			$('#kitty_submit').prop("disabled",false);
-		}else{
-			$('#kitty_submit').prop("disabled",true);
+	
+	$(document).on('change', '.partner_select', function() {
+		console.log("select changed");
+		if (this.value == "rook"){
+			console.log("new value is rook");
+			$(this).parent().children().each(function(){
+				console.dir($(this));
+				$(this).val("rook");
+				$(this).val("rook");
+
+			});
+			
 		}
 	});
-
+	
 
 	$('#submit_kitty').submit(function(e){
 		e.preventDefault(); // prevents page reloading
@@ -94,8 +101,10 @@ $(function () {
 			//gets new kitty
 			var kitty = [];
 			$('#cards_ul').children('li').each(function () {
-				if ($(this).attr('class') == 'cards_li_selected'){
-					var cardArray = $(this).attr('id').split(' ');
+				if ($(this).children(':first').attr('class') == 'card_img_selected'){
+					var cardID = $(this).children(':first').attr('id').slice(3); //cuts off the img part of id
+					console.log(cardID);
+					var cardArray = cardID.split(' ');
 					var value = cardArray[0];
 					var suit = cardArray[1];
 					kitty.push({
@@ -106,24 +115,42 @@ $(function () {
 			});
 
 			//gets partner
-			var partnerArray = document.getElementById("partner_input").value.split(" ");
+			var partnerInputsDiv = document.getElementById("partner_inputs");
+			partnerArray = [];
 
-			var partner = {
-				value: partnerArray[0],
-				suit: partnerArray[1]
+			var i = 0;
+
+			while(document.getElementById(i + "partner_input_suit")){
+				
+				var suit = document.getElementById(i + "partner_input_suit").value;
+				var value = document.getElementById(i + "partner_input_value").value;
+
+					partnerArray.push({
+					value: value,
+					suit: suit
+				});
+				i++;
+
 			}
 
+
+			//get trump
+			var trumpcolor = document.getElementById("trump_input").value;
+
+
 			console.dir(kitty);
-			console.dir(partner);
+			console.dir(partnerArray);
+			console.dir(trumpcolor);
 
 			socket.emit('new kitty', kitty);
 
-			socket.emit('partner', partner);
-			
+			socket.emit('partner', partnerArray);
+
+			socket.emit('trump', trumpcolor);
 		
 	});
 
-	socket.on('name accepted', function(data){
+	socket.on('name accepted', function(){
 		console.dir("Name accepted");
 
 		
@@ -255,20 +282,23 @@ $(function () {
 		var partner_inputs_div = document.getElementById("partner_inputs");
 		for (var i = 0; i < numPartners; i++){
 
-			// Create input:
-			var input = document.createElement('input');
-			input.setAttribute("id", "partner_input" + i);
+			var partner_select = document.getElementById("partner_select").cloneNode(true);
+			partner_select.classList.remove("template");
+			
+			partner_select.id = i + "partner_inputs";
 
+			console.dir(partner_select);
+
+			partner_select.children[0].id = i + "partner_input_suit";
+			partner_select.children[1].id = i + "partner_input_value";
+			
 			// Create label
 			var label = document.createElement('label');
-			label.setAttribute("for", "partner_input" + i);
-			label.innerHTML = "Call partner " + i;
-
-
-				
-			// Add inputs and label to div
-			partner_inputs_div.appendChild(input);
+			label.setAttribute("for", i + "partner_inputs");
+			label.innerHTML = "Call partner " + (i + 1) + ": ";
 			partner_inputs_div.appendChild(label);
+
+			partner_inputs_div.appendChild(partner_select);
 		}
 		
 	});
@@ -389,19 +419,22 @@ $(function () {
 			var item = document.createElement('li');
 			item.setAttribute("class", "cards_li");
 			item.setAttribute("id", cards[i].value + " " + cards[i].suit);
+			//item.appendChild(document.createTextNode(cards[i].value + " " + cards[i].suit));
 			item.draggable = true;
 
-			//var link = document.createElement('a');
-			//link.setAttribute('href', '#');
-			//link.setAttribute('id', 'cards[i].value + " " + cards[i].suit');
-			
+			var img = document.createElement('img');
+			img.setAttribute('src', `cards/${findCard(cards[i].value, cards[i].suit)}`);
+			img.setAttribute('id', "img" + cards[i].value + " " + cards[i].suit);
+			img.setAttribute('class', 'card_img');
+			//img.draggable = true;
 
 			// Set link contents:
 			//link.appendChild(document.createTextNode(cards[i].value + " " + cards[i].suit));
-			item.appendChild(document.createTextNode(cards[i].value + " " + cards[i].suit));
+			//item.appendChild(document.createTextNode(cards[i].value + " " + cards[i].suit));
+			//item.appendChild(img);
 
 			//set li contents
-			//item.appendChild(link);
+			item.appendChild(img);
 
 			// Add it to the list:
 			list.appendChild(item);			
@@ -415,7 +448,7 @@ $(function () {
 	}
 
 	
-	  // Updates users list
+	// Updates users list
 	const update_users = (users) => {
 		
 		var users_div = document.getElementById('users_div');
@@ -450,7 +483,30 @@ $(function () {
 		}
 
 	}
+
+
+
+	// Maps image to card
+	const findCard = (value, suit) => {
+		
+		if (suit == "rook"){
+			return "crow.svg";
+		}
+
+		correctVal = value.toString();
+		correctSuit = suit.charAt(0).toUpperCase() + suit.slice(1);
+
+
+		if (correctVal.length < 2){
+			correctVal = "0" + correctVal;
+		}
+
+
+		var cardLink = correctSuit + " " + correctVal + ".svg";
+		return cardLink;
+	}
 	
+
 	
 	socket.on('logout', function(data){
 		console.dir("Player left. Total: " + data.numUsers);
