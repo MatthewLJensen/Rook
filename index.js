@@ -238,18 +238,23 @@ class Game{
 function beatsPrevValue(incumbent, newVal){
 	if (incumbent == 1){
 		return false;
-	}
-	if (incumbent == "rook"){
+	} else if (newVal == 1){
 		return true;
-	}
-	if (newVal > incumbent){
+	}else if(incumbent == "rook"){
+		return true;
+	}else if(newVal == "rook"){
+		return false;
+	}else if (newVal > incumbent){
 		return true;
 	}else{
 		return false;
 	}
-
 }
 
+function trickContainsTrump () {
+
+
+}
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -525,10 +530,16 @@ io.on('connection', (socket) => {
 		if (socket.id == game.players[game.turn].sid){
 			
 			//var card = data.card;
-			console.dir(data.card);
-			var currentCard = new Card(data.card.value, data.card.suit);
+			if (data.card.value != "rook"){
+				var currentCard = new Card(parseInt(data.card.value), data.card.suit);
+			}else{
+				var currentCard = new Card(data.card.value, data.card.suit);
+			}
 			
-			console.log('current card 1:')
+			
+			//set 
+
+			console.log('current card:')
 			console.dir(currentCard);
 			
 
@@ -536,26 +547,35 @@ io.on('connection', (socket) => {
 					
 				var hasTrickColor = false;
 
+				if (currentCard.suit == "rook"){
+					currentCard.suit = game.trump;
+				}
+
 				if (currentCard.suit != game.trickColor){
 					console.log("player played non-trick color");
 					
 					//check to make sure there is no trickColor in players hand
+					// Check for rook if game.trickColor is trump
+					console.dir(game.players[game.turn].hand);
 					for (var i = 0; i < game.players[game.turn].hand.length; i++){
-						if (game.players[game.turn].hand[i].suit == game.trickColor){
+						if (game.players[game.turn].hand[i].suit == game.trickColor || (game.trickColor == game.trump && game.players[game.turn].hand[i].suit == "rook")){
 							console.log(game.players[game.turn].username + " has tried to play a non-trickColor card while having that color in their hand")
 							hasTrickColor = true;
 							io.to(socket.id).emit('must play color of trick');
 							break;
 						}
 					}
+					console.log("but they don't have the color, so it's ok");
 				}
+				
+
 
 				if (!hasTrickColor){ //if they don't have the trick color OR if they placed a trick color card (since false is the initial value of hasTrickColor)
 
 					// check to see if this card should replace current winner
 					var trumpInTrick = false;
-
 					var replace = true;
+
 
 					for (var i = 0; i < game.trickCards.length; i++){
 						if (game.trickCards[i].suit == game.trump || game.trickCards[i].suit == "rook"){
@@ -565,23 +585,27 @@ io.on('connection', (socket) => {
 						}
 					}
 						
-					if ((currentCard.suit == game.trump || currentCard.suit == "rook") && !trumpInTrick){
-						replace = true;
-					}else if ((currentCard.suit != game.trump) && trumpInTrick){
+
+					if (currentCard.suit != game.trickColor && currentCard.suit != game.trump && currentCard.suit != "rook"){//checks for someone playing a different colored card that isn't trump
 						replace = false;
-					}else if ((currentCard.suit != game.trump) && !trumpInTrick){
+					}else if ((currentCard.suit == game.trump || currentCard.suit == "rook") && !trumpInTrick){
+						replace = true;
+					}else if ((currentCard.suit != game.trump && currentCard.suit != "rook") && trumpInTrick){
+						replace = false;
+					}else if ((currentCard.suit != game.trump) && !trumpInTrick){ //checked
 						
 						if (currentCard.value != 1){
 
 							for (var i = 0; i < game.trickCards.length; i++){
-								if (currentCard.value < game.trickCards[i].value){
+								if (currentCard.value < game.trickCards[i].value || game.trickCards[i].value == 1){
 									replace = false;
+									break;
 								}
 							}
 
 						}
 
-					}else if ((currentCard.suit == game.trump || currentCard.suit == "rook") && trumpInTrick){
+					}else if ((currentCard.suit == game.trump || currentCard.suit == "rook") && trumpInTrick){//checked
 						
 						if (currentCard.value == "rook"){
 							replace = false;
@@ -590,7 +614,7 @@ io.on('connection', (socket) => {
 							if (currentCard.value != 1){
 
 								for (var i = 0; i < game.trickCards.length; i++){
-									if ((currentCard.value < game.trickCards[i].value) && (game.trickCards[i].suit == game.trump || game.trickCards[i].suit == "rook")){
+									if ((currentCard.value < game.trickCards[i].value || game.trickCards[i].value == 1) && (game.trickCards[i].suit == game.trump || game.trickCards[i].suit == "rook")){
 										replace = false;
 									}
 								}
@@ -605,6 +629,11 @@ io.on('connection', (socket) => {
 						game.currentTrickWinner = game.turn;
 					}
 
+					//switches rook suit back to "rook"
+					if (currentCard.value == "rook"){ //test this
+						currentCard.suit = "rook";
+					}
+
 					//update player hand
 					game.players[game.turn].hand = [];
 					for (var i = 0; i < data.hand.length; i++){
@@ -615,8 +644,8 @@ io.on('connection', (socket) => {
 					}
 
 					//send new hand back to player
-					console.log("sending new hand back");
-					console.dir(game.players[game.turn])
+					//console.log("sending new hand back");
+					//console.dir(game.players[game.turn])
 					io.to(socket.id).emit('new hand', game.players[game.turn]);
 					
 
@@ -641,11 +670,13 @@ io.on('connection', (socket) => {
 				game.trickStarted = true;
 
 				//this is when the first person plays trick
+				
 				if (currentCard.suit == "rook"){
-					game.trickColor = game.trumpColor;
+					game.trickColor = game.trump;
 				}else{
 					game.trickColor = currentCard.suit;
 				}
+				
 				game.currentTrickWinner = game.turn;
 
 
@@ -687,13 +718,16 @@ io.on('connection', (socket) => {
 
 		//Check for trick over
 		if (game.trickCards.length == game.players.length){
-			console.log("trick over")
-			console.log("Trick winner: " + game.currentTrickWinner);
-			console.log("Trick contents: ");
-			console.dir(game.trickCards);
+			// console.log("trick over")
+			// console.log("Trick winner: " + game.currentTrickWinner);
+			// console.log("Trick contents: ");
+			// console.dir(game.trickCards);
 
-			console.log("winning player: ");
-			console.dir(game.players[game.currentTrickWinner]);
+			// console.log("winning player: ");
+			// console.dir(game.players[game.currentTrickWinner]);
+
+			//start trick over
+			game.trickStarted = false;
 
 			//determine next start player
 			game.turn = game.currentTrickWinner;
