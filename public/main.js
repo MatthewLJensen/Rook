@@ -31,13 +31,13 @@ $(function () {
 		
 			//Tell the server to setup/start the game
 			var bid = document.getElementById('bid_input').value;
-			var bid_label = document.getElementById('#bid_label');
+			var bid_label = document.getElementById('bid_label');
 			
 			//input checking
-			if (bid != "pass" && bid < 80){
+			if ((bid != "pass" && bid < 80 ) || (bid != "pass" && bid > 200 && bid < 400)){
 				bid_label.innerHTML = "Bid not valid";
 			}else{
-			
+				bid_label.innerHTML = "";
 				socket.emit('bid', bid);
 				
 			}
@@ -228,6 +228,9 @@ $(function () {
 		
 		var messages_ul = document.getElementById('messages');
 		$("#messages").stop().animate({ scrollTop: $("#messages")[0].scrollHeight}, 1000);
+
+		//tab alert for new message?
+		//make it on the right side of the screen
 	});
 	
 	socket.on('login', function(data){
@@ -243,6 +246,7 @@ $(function () {
 		//Hide Lobby
 		$('.lobby').hide();
 		$('.playing_area').show();
+		$('#bidding_div').show();
 		
 		//set global variable for total number of players
 		numPlayers = data.order.length;
@@ -281,6 +285,16 @@ $(function () {
 		update_bidder(data.order, username, data.turn);
 		
 		
+	});
+
+	socket.on('bid too low', function(){
+		var bid_label = document.getElementById('bid_label');
+		bid_label.innerHTML = "Bid not valid";		
+	});
+
+	socket.on('not your turn', function(){
+		var bid_label = document.getElementById('bid_label');
+		bid_label.innerHTML = "It's not your turn, you little hacker.";		
 	});
 	
 	socket.on('bidding ended', function(data){
@@ -435,6 +449,22 @@ $(function () {
 		console.log("You have trick color, but you tried to play another color");
 	});
 
+	socket.on('round end', function(data){
+		console.log("Round over. Player info coming in..");
+		var order = data.order;
+		
+		display_opponents(order, player.turnnum);
+		
+		//show announcements
+		var announcement = document.getElementById("announcements");
+		announcement.innerHTML = "Start Bidding";
+		
+		//set bidder
+		update_bidder(order, player.username, 0);
+		
+		
+	});
+	
 	
 	const update_player = (order, myUsername, turn) => {
 		
@@ -481,8 +511,8 @@ $(function () {
 		var opponents = document.getElementById('opponents')
 		currentBidder = order[turn].username;
 		
-		console.log(currentBidder);
-		console.log(myUsername);
+		//console.log(currentBidder);
+		//console.log(myUsername);
 		
 		if (currentBidder == myUsername){
 			//indicate it is my turn
@@ -517,7 +547,7 @@ $(function () {
 
 	const display_opponents = (order, myPosition) => {
 		var opponents = document.getElementById('opponents')
-
+		opponents.innerHTML = "";
 
 
 		
@@ -534,7 +564,9 @@ $(function () {
 				item.setAttribute("id", order[i % order.length].username);
 
 				// Set its contents:
-				item.appendChild(document.createTextNode(order[i % order.length].username));
+				item.appendChild(document.createTextNode(order[i % order.length].username + " (" + order[i % order.length].points + " points)"));
+
+
 
 				// Add it to the div:
 				list.appendChild(item);
@@ -542,12 +574,12 @@ $(function () {
 				// Add new div to opponents div
 				opponents.appendChild(list);
 
+			}else{
+				//update my points
+				document.getElementById("my_points").innerHTML = "My total points: " + order[i % order.length].points;
 			}
+
 		}
-
-		
-
-
 	}
 
 	const display_cards = (cards) => {
