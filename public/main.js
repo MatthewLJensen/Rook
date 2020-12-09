@@ -9,6 +9,7 @@ $(function () {
 	var selectingKitty = false;
 	var kittyLength = 0;
 	var numPlayers = 0;
+	var playingCard = false;
 
 	$('#join_lobby').submit(function(e){
 		e.preventDefault(); // prevents page reloading
@@ -49,29 +50,73 @@ $(function () {
 		var selectedCardID = $(this).attr('id');
 		var selectedCard = document.getElementById(selectedCardID);
 
-		
-		if (selectedCard.classList.contains('card_img')){ //clicking an unselected card
-			console.log("selecting card");
-			selectedCard.classList.add('card_img_selected');
-			selectedCard.classList.remove('card_img');
-			numCardsSelected++;
-		}else{//clicking an selected card
-			console.log("deselecting card");
-			selectedCard.classList.add('card_img');
-			selectedCard.classList.remove('card_img_selected');
-			numCardsSelected--;
-		}
+		if (!playingCard){
 
-		if (selectingKitty){
-			var announcement = document.getElementById("instructions");
-			announcement.innerHTML = "Choose " + kittyLength + " cards to send back. (" + numCardsSelected + " out of " + kittyLength + ")";
-		}
+			if (selectedCard.classList.contains('card_img')){ //clicking an unselected card
+				console.log("selecting card");
+				selectedCard.classList.add('card_img_selected');
+				selectedCard.classList.remove('card_img');
+				numCardsSelected++;
+			}else{//clicking an selected card
+				console.log("deselecting card");
+				selectedCard.classList.add('card_img');
+				selectedCard.classList.remove('card_img_selected');
+				numCardsSelected--;
+			}
+	
+			if (selectingKitty){
+				var announcement = document.getElementById("instructions");
+				announcement.innerHTML = "Choose " + kittyLength + " cards to send back. (" + numCardsSelected + " out of " + kittyLength + ")";
+			}
+	
+			if (selectingKitty && numCardsSelected == kittyLength){
+				$('#kitty_submit').prop("disabled",false);
+			}else{
+				$('#kitty_submit').prop("disabled",true);
+			}
 
-		if (selectingKitty && numCardsSelected == kittyLength){
-			$('#kitty_submit').prop("disabled",false);
 		}else{
-			$('#kitty_submit').prop("disabled",true);
+			//user clicking a card will play it
+			var cardID = selectedCardID.slice(3); //cuts off the img part of id
+			var cardArray = cardID.split(' ');
+			var value = cardArray[0];
+			var suit = cardArray[1];
+			
+			var playedCard = {
+				value: value,
+				suit: suit
+			};
+
+			console.log("played card:");
+			console.dir(playedCard);
+
+			//get hand
+			var hand = [];
+			$('#cards_ul').children('li').each(function () {
+				if ($(this).children(':first').attr('id') != selectedCardID){
+					var cardID = $(this).children(':first').attr('id').slice(3); //cuts off the img part of id
+					console.log(cardID);
+					var cardArray = cardID.split(' ');
+					var value = cardArray[0];
+					var suit = cardArray[1];
+					hand.push({
+						value: value,
+						suit: suit
+					})	
+				}				
+			});
+
+			
+			console.log("new hand:");
+			console.dir(hand);
+
+			socket.emit('play card', {
+				card: playedCard,
+				hand: hand
+			});
 		}
+		
+
 		
 	});
 
@@ -328,7 +373,109 @@ $(function () {
 		$('#kitty_selection').hide();
 		
 	});
+
+	socket.on('round beginning', function(data){
+		console.log("round is beginning");
+		console.dir(data);
+		
+		var i = 0;
+
+		partners = ""
+		while(data.partnerArray[i]){
+			partners += data.partnerArray[i].suit + " " + data.partnerArray[i].value + "<br />";
+			i++;
+		}
+
+		
+		//update announcements
+		var announcement = document.getElementById("announcements");
+		announcement.innerHTML = "Final Bid: " + data.currentBid + " by " + data.highestBidder + "<br />Trump Color: " + data.trumpColor + "<br /><u>Partner(s)</u>:<br />" + partners;
+
+		//bold current player
+		update_player(data.order, username, data.turn);
+		
+	});
+
+	socket.on('next player', function(data){
+		console.log("next persons turn");
+		console.dir(data);
+
+
+		//bold current player
+		update_player(data.order, username, data.turn);
+
+		//add last played card
+		console.log("last played: " + findCard(data.lastCard.value, data.lastCard.suit));
+		var img = document.createElement('img');
+		img.setAttribute('src', `cards/${findCard(data.lastCard.value, data.lastCard.suit)}`);
+		img.setAttribute('id', "img" + data.lastCard.value + " " + data.lastCard.suit);
+		img.setAttribute('class', 'card_img_card_pile');
+
+		document.getElementById('card_pile').appendChild(img);
+		
+	});
+
+	socket.on('next trick', function(data){
+		console.log("new trick");
+		console.dir(data);
+
+		//bold current player
+		update_player(data.order, username, data.turn);
+
+		//remove previously played cards
+		document.getElementById('card_pile').innerHTML = "";
+
+		//tell users who won previous trick
+		document.getElementById('last_trick_winner').innerHTML = "Last Trick Winner: " + data.order[data.turn].username;
+		
+	});
 	
+		
+	socket.on('must play color of trick', function(){
+		console.log("You have trick color, but you tried to play another color");
+	});
+
+	
+	const update_player = (order, myUsername, turn) => {
+		
+		var currentPlayer = order[turn].username;
+		
+		console.log("Current player: " + currentPlayer);
+		
+		if (currentPlayer == myUsername){
+			//indicate it is my turn
+//			$('#bid_action').prop("disabled",false);
+			console.log("It is my turn to play a card");
+			playingCard = true;
+
+			//clear bolds from opponents
+			$('#opponents').children('div').each(function () {
+				$(this).children().first().css("font-weight","");
+			});
+			
+		}else{
+			//indicate it is not my turn
+//			$('#bid_action').prop("disabled",true);
+			console.log("It is not my turn to play a card");
+			playingCard = false;
+			$('#opponents').children('div').each(function () {
+				if ($(this).children().first().attr('id') == currentPlayer){
+					$(this).children().first().css("font-weight","Bold");
+					
+				}else{
+					$(this).children().first().css("font-weight","");
+					
+				}
+				
+			});
+			
+		}
+
+	}
+
+
+
+
 	const update_bidder = (order, myUsername, turn) => {
 		
 		var opponents = document.getElementById('opponents')
@@ -341,7 +488,6 @@ $(function () {
 			//indicate it is my turn
 			$('#bid_action').prop("disabled",false);
 			console.log("It is my turn to bid");
-			
 			//clear bolds from opponents
 			$('#opponents').children('div').each(function () {
 				$(this).children().first().css("font-weight","");

@@ -100,6 +100,10 @@
 	border-color: blue;
 }
 
+.card_img_card_pile{
+	width: 150px;
+}
+
 
 a {
 	color: black;

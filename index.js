@@ -86,13 +86,12 @@ class Player{
 	constructor(sid,username){
 		this.sid = sid;
 		this.username = username;
-		this.hand = []; //string
+		this.hand = [];
 		this.bid = 0;
-		//this.hand = hand;// vector of cards
-		//this.won = won; //array of cards
+		this.won = []; //array of cards
 		this.passed = false;
 	}
-	won(wonparam){
+	addWon(wonparam){
 		for(var i = 0; i < wonparam.length; i++){
 			this.won.push(wonparam[i]);
 		}
@@ -124,7 +123,10 @@ class Game{
 		this.passed = [];
 		this.trump = 0;
 		this.partnerArray = [];
-		
+		this.trickColor = 0;
+		this.trickStarted = false;
+		this.currentTrickWinner = 0;
+		this.trickCards = [];
 	}
 	
 	startGame(){
@@ -203,16 +205,50 @@ class Game{
 		}
 	}
 	
-	newRound(){
+	beginRound(){
+		//this.turn = game.highestBidder;
+
+	//	sets turn order for each player
+	//	for (var i = 0; i < this.players.length; i++){
+	//		if (i + startingID > this.players.length - 1){
+	//			this.players[(startingID + i) - this.players.length + 1].setturnorder(i);
+	//		}else{
+	//			this.players[startingID + i].setturnorder(i);
+	//		}
+	//	}
+
+	}
+
+	resetRound(){
 		//reset hand
 		//deal/new kitty
 		//reset passed bid
 		
 		
 	}
+
+	changeRookSuit(){
+		//finds rook in hand or kitty and changes its suit to the trump color 
+
+	}
 	
 }
 
+
+function beatsPrevValue(incumbent, newVal){
+	if (incumbent == 1){
+		return false;
+	}
+	if (incumbent == "rook"){
+		return true;
+	}
+	if (newVal > incumbent){
+		return true;
+	}else{
+		return false;
+	}
+
+}
 
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -383,7 +419,7 @@ io.on('connection', (socket) => {
 							game.players[game.highestBidder].hand.push(game.kitty[i]);
 						}
 						//game.highestBidder.sid
-						//send new hand
+						//send kitty
 						io.to(game.players[game.highestBidder].sid).emit('kitty contents', game.kitty);
 
 						
@@ -396,8 +432,7 @@ io.on('connection', (socket) => {
 					
 				}
 	
-		}
-		else{
+		}else{
 			console.log("a player has tried to play out of turn");
 			io.to(socket.id).emit('not your turn');
 		}
@@ -442,6 +477,7 @@ io.on('connection', (socket) => {
 
 
 	socket.on('partner', (partnerArray) =>{
+		//check to make sure the sender is the highest bidder
 		for (var i = 0; i < partnerArray.length; i++){
 			var partner = new Card(partnerArray[i].value, partnerArray[i].suit);
 			game.partnerArray.push(partner);
@@ -451,10 +487,240 @@ io.on('connection', (socket) => {
 	});
 
 	socket.on('trump', (trumpColor) =>{
+		//check to make sure the sender is the highest bidder
 		console.dir(trumpColor);
 		game.trump = trumpColor;
 		console.log("Trump Color: " + game.trump);
+
+		//this is currently starting playing cards section of the round
+		console.log("final bid: " + game.currentBid);
+
+		game.beginRound();
+
+		game.turn = game.highestBidder;
+
+		console.log("turn: " + game.turn);
+
+		io.emit('round beginning', {
+			trumpColor: game.trump,
+			partnerArray: game.partnerArray,
+			turn: game.turn,
+			order: game.order(),
+			highestBidder: game.players[game.highestBidder].username,
+			currentBid: game.currentBid
+		});
+
 	});
+
+
+	socket.on('play card', (data) =>{
+
+		console.dir(data);
+		
+		//check to make sure it's the senders turn
+		console.log("curent player username: " + game.players[game.turn].username);
+		console.log("curent player socket id: " + game.players[game.turn].sid);
+		console.log("socket id: " + socket.id);
+
+		if (socket.id == game.players[game.turn].sid){
+			
+			//var card = data.card;
+			console.dir(data.card);
+			var currentCard = new Card(data.card.value, data.card.suit);
+			
+			console.log('current card 1:')
+			console.dir(currentCard);
+			
+
+			if (game.trickStarted){
+					
+				var hasTrickColor = false;
+
+				if (currentCard.suit != game.trickColor){
+					console.log("player played non-trick color");
+					
+					//check to make sure there is no trickColor in players hand
+					for (var i = 0; i < game.players[game.turn].hand.length; i++){
+						if (game.players[game.turn].hand[i].suit == game.trickColor){
+							console.log(game.players[game.turn].username + " has tried to play a non-trickColor card while having that color in their hand")
+							hasTrickColor = true;
+							io.to(socket.id).emit('must play color of trick');
+							break;
+						}
+					}
+				}
+
+				if (!hasTrickColor){ //if they don't have the trick color OR if they placed a trick color card (since false is the initial value of hasTrickColor)
+
+					// check to see if this card should replace current winner
+					var trumpInTrick = false;
+
+					var replace = true;
+
+					for (var i = 0; i < game.trickCards.length; i++){
+						if (game.trickCards[i].suit == game.trump || game.trickCards[i].suit == "rook"){
+							trumpInTrick = true;
+							console.log("trump in trick: " + trumpInTrick);
+							break;
+						}
+					}
+						
+					if ((currentCard.suit == game.trump || currentCard.suit == "rook") && !trumpInTrick){
+						replace = true;
+					}else if ((currentCard.suit != game.trump) && trumpInTrick){
+						replace = false;
+					}else if ((currentCard.suit != game.trump) && !trumpInTrick){
+						
+						if (currentCard.value != 1){
+
+							for (var i = 0; i < game.trickCards.length; i++){
+								if (currentCard.value < game.trickCards[i].value){
+									replace = false;
+								}
+							}
+
+						}
+
+					}else if ((currentCard.suit == game.trump || currentCard.suit == "rook") && trumpInTrick){
+						
+						if (currentCard.value == "rook"){
+							replace = false;
+						}else{
+
+							if (currentCard.value != 1){
+
+								for (var i = 0; i < game.trickCards.length; i++){
+									if ((currentCard.value < game.trickCards[i].value) && (game.trickCards[i].suit == game.trump || game.trickCards[i].suit == "rook")){
+										replace = false;
+									}
+								}
+
+							}
+
+						}
+					}
+
+					if (replace){
+						console.log("last player currently winning")
+						game.currentTrickWinner = game.turn;
+					}
+
+					//update player hand
+					game.players[game.turn].hand = [];
+					for (var i = 0; i < data.hand.length; i++){
+						var handCard = new Card(data.hand[i].value, data.hand[i].suit);
+						//potentiall add some check to make sure the total number are cards in the hand is correct
+						game.players[game.turn].hand.push(handCard);	
+							
+					}
+
+					//send new hand back to player
+					console.log("sending new hand back");
+					console.dir(game.players[game.turn])
+					io.to(socket.id).emit('new hand', game.players[game.turn]);
+					
+
+					game.trickCards.push(currentCard);
+					game.nextTurn();
+
+
+					io.emit('next player', {
+					
+						lastCard: game.trickCards[game.trickCards.length - 1],
+						turn: game.turn,
+						order: game.order(),
+						
+						
+					});
+
+				}
+						
+
+			} else {
+				//starts trick
+				game.trickStarted = true;
+
+				//this is when the first person plays trick
+				if (currentCard.suit == "rook"){
+					game.trickColor = game.trumpColor;
+				}else{
+					game.trickColor = currentCard.suit;
+				}
+				game.currentTrickWinner = game.turn;
+
+
+				//this is duplicated from above. We need to fix this so it isn't duplicated
+				//update player hand
+				game.players[game.turn].hand = [];
+				for (var i = 0; i < data.hand.length; i++){
+					var handCard = new Card(data.hand[i].value, data.hand[i].suit);
+					//potentiall add some check to make sure the total number are cards in the hand is correct
+					game.players[game.turn].hand.push(handCard);	
+						
+				}
+			
+
+				//send new hand back to player
+				console.log("sending new hand back");
+				io.to(socket.id).emit('new hand', game.players[game.turn]);
+
+				game.trickCards.push(currentCard);
+				game.nextTurn();
+
+				io.emit('next player', {
+					
+					lastCard: game.trickCards[game.trickCards.length - 1],
+					turn: game.turn,
+					order: game.order(),
+					
+					
+				});
+			}
+
+
+
+		}else{
+			console.log("a player has tried to play out of turn");
+			io.to(socket.id).emit('not your turn');
+		}
+
+
+		//Check for trick over
+		if (game.trickCards.length == game.players.length){
+			console.log("trick over")
+			console.log("Trick winner: " + game.currentTrickWinner);
+			console.log("Trick contents: ");
+			console.dir(game.trickCards);
+
+			console.log("winning player: ");
+			console.dir(game.players[game.currentTrickWinner]);
+
+			//determine next start player
+			game.turn = game.currentTrickWinner;
+
+			//reset trick color
+			game.trickColor = 0;
+			
+			//add trick cards to winner hand
+			for (var i = 0; i < game.trickCards.length; i++){
+				game.players[game.currentTrickWinner].won.push(game.trickCards[i]);
+			}
+
+			//reset trickCards
+			game.trickCards = [];
+
+			//alert players and begin next trick
+			io.emit('next trick', {
+					
+				turn: game.turn,
+				order: game.order(),
+				
+				
+			});
+		}
+
+	});
+
 
 	socket.on('chat message', (msg) => {
 		io.emit('chat message', socket.username + ": " + msg);
