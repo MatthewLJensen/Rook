@@ -712,7 +712,7 @@ io.on('connection', (socket) => {
 				//check if it's a partner card
 				for (var i = 0; i < game.partnerArray.length; i++){
 					if (currentCard.value == game.partnerArray[i].value && currentCard.suit == game.partnerArray[i].suit){
-						game.players[game.turn].partner == true;
+						game.players[game.turn].partner = true;
 						console.log(game.players[game.turn].username + " is a partner");
 					}
 					

@@ -458,6 +458,9 @@ $(function () {
 		//show announcements
 		var announcement = document.getElementById("announcements");
 		announcement.innerHTML = "Start Bidding";
+
+		//hide "last trick winner"
+		document.getElementById('last_trick_winner').innerHTML = "";
 		
 		//set bidder
 		update_bidder(order, player.username, 0);
