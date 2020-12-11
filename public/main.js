@@ -509,10 +509,21 @@ $(function () {
 
 	socket.on('game over', function(data){
 		console.log("Game over. winner info coming in..");
-		alert("Game Over\nThe winner is: " + data.winner + ".\nThey won with " + data.points + "points!\n\nYou are returning to the lobby");
 
-		$('.lobby').show();
-		$('.playing_area').hide();
+
+		document.getElementById("card_pile").innerHTML = "Game Over<br />The winner is: " + data.winner + ".<br />They won with " + data.points + "points!<br /><br />You are returning to the lobby";
+
+
+		setTimeout(function(){
+			document.getElementById("card_pile").innerHTML = "";
+			$('.lobby').show();
+			$('.playing_area').hide();
+
+		}, 15000);
+
+		//alert("Game Over\nThe winner is: " + data.winner + ".\nThey won with " + data.points + "points!\n\nYou are returning to the lobby");
+
+
 	});
 	
 	

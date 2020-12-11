@@ -246,6 +246,7 @@ class Game{
 			
 			for (var i = 0; i < this.players.length; i++){  //this doesn't check for ties!
 				if (this.players[i].points > prevHigh){
+					prevHigh = this.players[i].points;
 					this.winner = i;
 				}
 			}
@@ -257,7 +258,7 @@ class Game{
 			});
 
 			//reset player values
-			for (var i = 0; i < this.players.length; i++){  //this doesn't check for ties!
+			for (var i = 0; i < this.players.length; i++){ 
 				this.players[i].points
 				this.players[i].hand = [];
 				this.players[i].bid = 0;
@@ -846,7 +847,7 @@ io.on('connection', (socket) => {
 				game.players[game.currentTrickWinner].roundPoints += 20;
 				
 
-				game.tallyScores();
+				
 
 
 				//alert players and begin next round
@@ -864,6 +865,8 @@ io.on('connection', (socket) => {
 
 					game.resetRound();
 					game.beginRound();
+
+					game.tallyScores();
 
 				}, 3000);
 	
