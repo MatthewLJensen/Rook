@@ -172,9 +172,17 @@ class Game{
 	tallyScores(){
 		var partnerPoints = 0;
 		var nonPartnerPoints = 0;
-		var patnersSucceeded = false;
+		var partnersSucceeded = false;
+		
+		var shootTheMoon = true;
+		var numWinners = 0;
 
 		for (var i = 0; i < this.players.length; i++){
+
+			if (this.players[i].won.length > 0){
+				numWinners++;
+			}
+
 			for (var x = 0; x < this.players[i].won.length; x++){
 				if (this.players[i].won[x].value == "rook"){
 					this.players[i].roundPoints += 20;
@@ -185,6 +193,7 @@ class Game{
 				} else if (parseInt(this.players[i].won[x].value) == 1){
 					this.players[i].roundPoints += 15;
 				}
+
 			}
 			console.log(this.players[i].username + "'s rounds points: " + this.players[i].roundPoints)
 			this.players[i].won = [];
@@ -197,18 +206,27 @@ class Game{
 			}
 		}
 
-		if (partnerPoints >= game.currentBid){
+		if (numWinners > 1){
+			shootTheMoon = false;
+		}
+
+		if (partnerPoints >= game.currentBid && game.currentBid != 400){
 			console.log("partners succeeded by wining " + partnerPoints + " points.")
-			patnersSucceeded = true;
+			partnersSucceeded = true;
+		}else if(game.currentBid == 400 && partnerPoints == 200 && shootTheMoon){
+			console.log("partner succeeded in shooting the moon and claiming every trick.")
+			partnersSucceeded = true;
 		}else{
 			console.log("partners failed to win " + game.currentBid + " points. They only got " + partnerPoints + " points.")
-			patnersSucceeded = false;
+			partnersSucceeded = false;
 		}
 
 		for (var i = 0; i < this.players.length; i++){
-			if (this.players[i].partner && patnersSucceeded){
+			if (this.players[i].partner && game.currentBid == 400 && partnersSucceeded){
+				this.players[i].points += 400;
+			}if (this.players[i].partner && partnersSucceeded){
 				this.players[i].points += partnerPoints;
-			}else if (this.players[i].partner && !patnersSucceeded){
+			}else if (this.players[i].partner && !partnersSucceeded){
 				this.players[i].points -= game.currentBid;
 			}else if (!this.players[i].partner){
 				this.players[i].points += nonPartnerPoints;
@@ -221,15 +239,36 @@ class Game{
 
 		}
 
+		//this will run if at least 1 person has more than 500 points. If more than 1 have more than 500, this will pick the highest points as the winner
 		if (this.over){
 			var prevHigh = 0;
 
-			for (var i = 0; i < this.players.length; i++){
+			
+			for (var i = 0; i < this.players.length; i++){  //this doesn't check for ties!
 				if (this.players[i].points > prevHigh){
 					this.winner = i;
 				}
 			}
-		}//alert players that a winner has been decided
+
+			//alert players that the game is over
+			io.emit('game over', {
+				winner: this.players[this.winner].username,
+				points: this.players[this.winner].points,
+			});
+
+			//reset player values
+			for (var i = 0; i < this.players.length; i++){  //this doesn't check for ties!
+				this.players[i].points
+				this.players[i].hand = [];
+				this.players[i].bid = 0;
+				this.players[i].won = [];
+				this.players[i].roundPoints = 0;
+				this.players[i].points = 0;
+				this.players[i].passed = false;
+				this.players[i].partner = false;
+			}
+			
+		}
 
 
 	}
@@ -482,8 +521,19 @@ io.on('connection', (socket) => {
 							game.players[game.highestBidder].hand.push(game.kitty[i]);
 						}
 						//game.highestBidder.sid
+						
+						//determine how many partners should be called
+						var numPartners = 0;
+						if(game.currentBid == 400){
+							numPartners = 0;
+						}else{
+							numPartners = (Math.floor(game.players.length/2) - 1);
+						}
 						//send kitty
-						io.to(game.players[game.highestBidder].sid).emit('kitty contents', game.kitty);
+						io.to(game.players[game.highestBidder].sid).emit('kitty contents', {
+							kitty: game.kitty,
+							numPartners: numPartners						
+						});
 
 						
 
@@ -541,6 +591,7 @@ io.on('connection', (socket) => {
 
 	socket.on('partner', (partnerArray) =>{
 		//check to make sure the sender is the highest bidder
+
 		for (var i = 0; i < partnerArray.length; i++){
 			var partner = new Card(partnerArray[i].value, partnerArray[i].suit);
 			game.partnerArray.push(partner);
@@ -811,12 +862,14 @@ io.on('connection', (socket) => {
 						order: game.order(),
 					});
 
+					game.resetRound();
+					game.beginRound();
+
 				}, 3000);
 	
 
 
-				game.resetRound();
-				game.beginRound();
+
 
 
 			}else{

@@ -10,6 +10,7 @@ $(function () {
 	var kittyLength = 0;
 	var numPlayers = 0;
 	var playingCard = false;
+	var bidding = true;
 
 	$('#join_lobby').submit(function(e){
 		e.preventDefault(); // prevents page reloading
@@ -27,6 +28,7 @@ $(function () {
 
 
 	$('#bid_action').click(function(){
+		if (bidding){
 			console.log("placing bid");
 		
 			//Tell the server to setup/start the game
@@ -41,6 +43,8 @@ $(function () {
 				socket.emit('bid', bid);
 				
 			}
+		}
+
 	});
 
 
@@ -65,8 +69,18 @@ $(function () {
 			}
 	
 			if (selectingKitty){
-				var announcement = document.getElementById("instructions");
-				announcement.innerHTML = "Choose " + kittyLength + " cards to send back. (" + numCardsSelected + " out of " + kittyLength + ")";
+				//var announcement = document.getElementById("instructions");
+				//announcement.innerHTML = "Choose " + kittyLength + " cards to send back. (" + numCardsSelected + " out of " + kittyLength + ")";
+
+				//It's important to make sure that we get a valid count for the number of cards selected. It's possible for them to get off sync if they have some selected when they get sent a new hand.
+				numCardsSelected = 0;
+				$('#cards_ul').children('li').each(function () {
+					if ($(this).children(':first').attr('class').includes("selected")){
+						numCardsSelected++;		
+					}				
+				});
+
+				document.getElementById("turn_notifier").innerHTML = "Choose " + kittyLength + " cards to send back. (" + numCardsSelected + " out of " + kittyLength + ")";
 			}
 	
 			if (selectingKitty && numCardsSelected == kittyLength){
@@ -75,7 +89,7 @@ $(function () {
 				$('#kitty_submit').prop("disabled",true);
 			}
 
-		}else{
+		}else if (!bidding){
 			//user clicking a card will play it
 			var cardID = selectedCardID.slice(3); //cuts off the img part of id
 			var cardArray = cardID.split(' ');
@@ -114,6 +128,8 @@ $(function () {
 				card: playedCard,
 				hand: hand
 			});
+		}else{
+			console.log("you're not allowed to play a card while bidding")
 		}
 		
 
@@ -160,20 +176,18 @@ $(function () {
 			});
 
 			//gets partner
-			var partnerInputsDiv = document.getElementById("partner_inputs");
 			partnerArray = [];
-
 			var i = 0;
-
 			while(document.getElementById(i + "partner_input_suit")){
 				
 				var suit = document.getElementById(i + "partner_input_suit").value;
 				var value = document.getElementById(i + "partner_input_value").value;
 
-					partnerArray.push({
+				partnerArray.push({
 					value: value,
 					suit: suit
 				});
+
 				i++;
 
 			}
@@ -208,9 +222,8 @@ $(function () {
 	});
 	
 	
-	socket.on('name in use', function(data){
+	socket.on('name in use', function(){
 		console.dir("That name is already in use, please choose another.");
-		
 	});
 	
 	
@@ -251,6 +264,11 @@ $(function () {
 		//set global variable for total number of players
 		numPlayers = data.order.length;
 		
+		//keep the system from sending this card in
+		playingCard = false;
+		bidding = true;
+
+
 		console.dir(data);
 		player = data.player;
 		var order = data.order;
@@ -301,6 +319,8 @@ $(function () {
 		console.log("bidding has ended");
 		console.dir(data);
 		
+		bidding = false;
+
 		//show announcements
 		var announcement = document.getElementById("announcements");
 		announcement.innerHTML = "Final bid = " + data.currentBid + " by " + data.highestBidder;
@@ -311,13 +331,19 @@ $(function () {
 		$('#opponents').children('div').each(function () {
 			$(this).children().first().css("font-weight","");
 		});
+
+		//clear turn
+		document.getElementById("turn_notifier").innerHTML = "";
 		
 		
 	});
 
-	socket.on('kitty contents', function(kitty){
+	socket.on('kitty contents', function(data){
 		console.log("receiving kitty");
 		
+		var kitty = data.kitty;
+		var numPartners = data.numPartners;
+
 		kittyLength = kitty.length;
 		selectingKitty = true;
 
@@ -336,9 +362,17 @@ $(function () {
 		
 		$('#kitty_selection').show();
 
+		//update that the user isn't playing a card
+		playingCard = false;
+
 		//This next section handles choosing 0-2 partners
-		var numPartners = (Math.floor(numPlayers/2) - 1);
+		//var numPartners = (Math.floor(numPlayers/2) - 1); This is now handled on the server
+
 		var partner_inputs_div = document.getElementById("partner_inputs");
+		
+		//clears div from previous filling
+		partner_inputs_div.innerHTML = "";
+
 		for (var i = 0; i < numPartners; i++){
 
 			var partner_select = document.getElementById("partner_select").cloneNode(true);
@@ -399,11 +433,13 @@ $(function () {
 			partners += data.partnerArray[i].suit + " " + data.partnerArray[i].value + "<br />";
 			i++;
 		}
-
 		
 		//update announcements
 		var announcement = document.getElementById("announcements");
 		announcement.innerHTML = "Final Bid: " + data.currentBid + " by " + data.highestBidder + "<br />Trump Color: " + data.trumpColor + "<br /><u>Partner(s)</u>:<br />" + partners;
+
+		//set bidding to false
+		bidding = false;
 
 		//bold current player
 		update_player(data.order, username, data.turn);
@@ -459,6 +495,9 @@ $(function () {
 		var announcement = document.getElementById("announcements");
 		announcement.innerHTML = "Start Bidding";
 
+		//update some visual stuff (not sure if this is the right place for this)
+		document.getElementById("kitty_points_p").innerHTML = "(There may or may not be points)";
+
 		//hide "last trick winner"
 		document.getElementById('last_trick_winner').innerHTML = "";
 		
@@ -467,19 +506,40 @@ $(function () {
 		
 		
 	});
+
+	socket.on('game over', function(data){
+		console.log("Game over. winner info coming in..");
+		alert("Game Over\nThe winner is: " + data.winner + ".\nThey won with " + data.points + "points!\n\nYou are returning to the lobby");
+
+		$('.lobby').show();
+		$('.playing_area').hide();
+	});
+	
 	
 	
 	const update_player = (order, myUsername, turn) => {
 		
 		var currentPlayer = order[turn].username;
 		
+		var turn_notifier = document.getElementById("turn_notifier");
+
 		console.log("Current player: " + currentPlayer);
 		
 		if (currentPlayer == myUsername){
 			//indicate it is my turn
 //			$('#bid_action').prop("disabled",false);
-			console.log("It is my turn to play a card");
-			playingCard = true;
+			
+			
+
+			if (!bidding){
+				console.log("It is my turn to play a card");
+				playingCard = true;
+				turn_notifier.innerHTML = "It is your turn to play a card";
+				
+			}else{
+				console.log("It is my turn to bid");
+				turn_notifier.innerHTML = "It is your turn to place a bid";
+			}
 
 			//clear bolds from opponents
 			$('#opponents').children('div').each(function () {
@@ -489,8 +549,11 @@ $(function () {
 		}else{
 			//indicate it is not my turn
 //			$('#bid_action').prop("disabled",true);
+			
 			console.log("It is not my turn to play a card");
+			turn_notifier.innerHTML = "";
 			playingCard = false;
+
 			$('#opponents').children('div').each(function () {
 				if ($(this).children().first().attr('id') == currentPlayer){
 					$(this).children().first().css("font-weight","Bold");
@@ -510,16 +573,14 @@ $(function () {
 
 
 	const update_bidder = (order, myUsername, turn) => {
-		
-		var opponents = document.getElementById('opponents')
+	
 		currentBidder = order[turn].username;
-		
-		//console.log(currentBidder);
-		//console.log(myUsername);
-		
+		var turn_notifier = document.getElementById("turn_notifier");
+
 		if (currentBidder == myUsername){
 			//indicate it is my turn
 			$('#bid_action').prop("disabled",false);
+			turn_notifier.innerHTML = "It is your turn to place a bid";
 			console.log("It is my turn to bid");
 			//clear bolds from opponents
 			$('#opponents').children('div').each(function () {
@@ -529,6 +590,7 @@ $(function () {
 		}else{
 			//indicate it is not my turn
 			$('#bid_action').prop("disabled",true);
+			turn_notifier.innerHTML = "";
 			console.log("It is not my turn to bid");
 			
 			$('#opponents').children('div').each(function () {
