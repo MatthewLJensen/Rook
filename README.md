@@ -1,10 +1,10 @@
 # Rook
  Rook Web Game built for Networking Class
 
-##Requirements
+## Requirements
 Node.js
 
-##Get the Code
+## Get the Code
 ```git clone https://github.com/MatthewLJensen/Rook ```
 
 ##Instructions
