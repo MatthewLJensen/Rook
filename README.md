@@ -10,4 +10,6 @@ Node.js
 ## Instructions
 open up a terminal and navigate to the folder you cloned the project in </li>
 Run the command ```Node index.js```
-Open up a browser to ```localhost::3001``` 
+Open up a browser to ```localhost:3001``` 
+
+
