@@ -8,8 +8,8 @@ Node.js
 ```git clone https://github.com/MatthewLJensen/Rook ```
 
 ## Instructions
-open up a terminal and navigate to the folder you cloned the project in </li>
-Run the command ```Node index.js```
-Open up a browser to ```localhost:3001``` 
+Using terminal, navigate to the folder you cloned the project into    
+Run the command ```Node index.js```  
+Open up a browser to ```http://localhost:3001/```  
 
 
