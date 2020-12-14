@@ -155,7 +155,10 @@ $(function () {
 	$('#submit_kitty').submit(function(e){
 		e.preventDefault(); // prevents page reloading
 			console.log("submitting kitty");
-
+			
+			//make sure the system doesn't think this player is selecting a kitty anymore
+			selectingKitty = false;
+			
 			//username = $('#name_input').val().trim();
 			//socket.emit('add user', username);
 			
@@ -263,6 +266,9 @@ $(function () {
 		
 		//set global variable for total number of players
 		numPlayers = data.order.length;
+
+		//make sure the system doesn't think anyone is selecting a kitty
+		selectingKitty = false;
 		
 		//keep the system from sending this card in
 		playingCard = false;
@@ -469,11 +475,31 @@ $(function () {
 		console.log("new trick");
 		console.dir(data);
 
-		//bold current player
-		update_player(data.order, username, data.turn);
+		//wait to change stuff so people can see last card
+		//setTimeout(function(){
 
-		//remove previously played cards
-		document.getElementById('card_pile').innerHTML = "";
+			//bold current player
+			update_player(data.order, username, data.turn);
+
+			//remove previously played cards
+			document.getElementById('card_pile').innerHTML = "";
+
+			//tell users who won previous trick
+			document.getElementById('last_trick_winner').innerHTML = "Last Trick Winner: " + data.order[data.turn].username;
+
+
+		//}, 3000);
+
+
+		
+	});
+
+	socket.on('update scores', function(data){
+		console.log("updating scores");
+		console.dir(data);
+
+		//update scores
+		display_opponents(data.order, player.turnnum);//this doesn't seem to be updating scores properly. Could be a problem on server end.
 
 		//tell users who won previous trick
 		document.getElementById('last_trick_winner').innerHTML = "Last Trick Winner: " + data.order[data.turn].username;
@@ -509,23 +535,41 @@ $(function () {
 
 	socket.on('game over', function(data){
 		console.log("Game over. winner info coming in..");
+		document.getElementById("card_pile").innerHTML = "Game Over<br />The winner is: " + data.winner + ".<br />They won with " + data.points + " points!";
+
+		for (var i = 0; i < data.players.length; i++){
+
+			if (data.players[i].username != data.winner){
+
+				// Create the list item:
+				var item = document.createElement('li');
+
+				// Set its contents:
+				item.appendChild(document.createTextNode(data.players[i].username + ": " + data.players[i].points + " points"));
+
+				// Add new div to opponents div
+				document.getElementById("card_pile").appendChild(item);
 
 
-		document.getElementById("card_pile").innerHTML = "Game Over<br />The winner is: " + data.winner + ".<br />They won with " + data.points + "points!<br /><br />You are returning to the lobby";
+			}
 
+		}
 
-		setTimeout(function(){
-			document.getElementById("card_pile").innerHTML = "";
-			$('.lobby').show();
-			$('.playing_area').hide();
-
-		}, 15000);
-
-		//alert("Game Over\nThe winner is: " + data.winner + ".\nThey won with " + data.points + "points!\n\nYou are returning to the lobby");
-
+		$("#card_pile").append("<br /><br />You are returning to the lobby in 15 seconds");
 
 	});
 	
+
+	socket.on('to lobby', function(data){
+		document.getElementById("card_pile").innerHTML = "";
+		console.log("You are being moved to the lobby");
+		console.dir(data);
+		
+		update_users(data.users);
+
+		$('.lobby').show();
+		$('.playing_area').hide();
+	});
 	
 	
 	const update_player = (order, myUsername, turn) => {

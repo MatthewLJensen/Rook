@@ -211,7 +211,7 @@ class Game{
 		}
 
 		if (partnerPoints >= game.currentBid && game.currentBid != 400){
-			console.log("partners succeeded by wining " + partnerPoints + " points.")
+			console.log("partners succeeded by winning " + partnerPoints + " points.")
 			partnersSucceeded = true;
 		}else if(game.currentBid == 400 && partnerPoints == 200 && shootTheMoon){
 			console.log("partner succeeded in shooting the moon and claiming every trick.")
@@ -251,12 +251,15 @@ class Game{
 				}
 			}
 
+
+
 			//alert players that the game is over
 			io.emit('game over', {
 				winner: this.players[this.winner].username,
 				points: this.players[this.winner].points,
+				players: game.order(),
 			});
-
+			
 			//reset player values
 			for (var i = 0; i < this.players.length; i++){ 
 				this.players[i].points
@@ -268,7 +271,19 @@ class Game{
 				this.players[i].passed = false;
 				this.players[i].partner = false;
 			}
+
+
 			
+			setTimeout(function(){
+				
+				io.emit('to lobby', {
+					numUsers: numUsers,
+					users: users
+				});
+
+			}, 15000);
+			
+
 		}
 
 
@@ -810,14 +825,6 @@ io.on('connection', (socket) => {
 
 		//Check for trick over
 		if (game.trickCards.length == game.players.length){
-			// console.log("trick over")
-			// console.log("Trick winner: " + game.currentTrickWinner);
-			// console.log("Trick contents: ");
-			// console.dir(game.trickCards);
-
-			// console.log("winning player: ");
-			// console.dir(game.players[game.currentTrickWinner]);
-
 			//start trick over
 			game.trickStarted = false;
 
@@ -850,25 +857,44 @@ io.on('connection', (socket) => {
 				
 
 
-				//alert players and begin next round
-				setTimeout(function(){
 
-					io.emit('next trick', {
-						turn: game.turn,
-						order: game.order(),
-					});
+				
+				
+					//alert players and begin next round
+					setTimeout(function(){
 
-					//send scores
-					io.emit('round end', {
-						order: game.order(),
-					});
 
-					game.resetRound();
-					game.beginRound();
+						game.tallyScores();
 
-					game.tallyScores();
+						if (game.over){
+							io.emit('update scores', {
+								turn: game.turn,
+								order: game.order(),
+							});
+						}
 
-				}, 3000);
+						if(!game.over){
+							io.emit('next trick', {
+								turn: game.turn,
+								order: game.order(),
+							});
+
+						
+							//send scores
+							io.emit('round end', {
+								order: game.order(),
+							});
+						}
+
+						game.resetRound();
+						game.beginRound();
+					}, 3000);
+				
+
+
+				
+
+
 	
 
 
