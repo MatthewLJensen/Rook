@@ -14,21 +14,69 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.10.1/Sortable.min.js"></script>
 	<script src="main.js"></script>
 	
-	<h1>Rook</h1>
+	<h1 id="page_title">Rook</h1>
 	
-	<div id="join_lobby_div">
+
+	<div id="sign_in_div">
 	
-		<form id="join_lobby" action="">
+		<form id="sign_in" action="">
 			<label class="username" for="name_input">Enter Your Name</label>
 			<input class="username" id="name_input" type="text"></input>
-			<button class="username" id="name_input_button">Join Lobby</button>
+			<button class="username" id="name_input_button">Sign In</button>
 		</form>
-		
+		<div id="username_taken"></div>
 	</div>
+
+
+	<div id="lobby_selection">
+		<h3>Lobbies</h3>
+		<br>
+		<table class="display_lobbies" id="lobbies_table" style="width:50%">
+			<tr>
+			  <th>Name</th>
+			  <th>Participants</th>
+			  <th>Current State</th>
+			  <th>Actions</th>
+			</tr>
+			<tr id="lobbies_list">
+			
+			</tr>
+		</table>
+
+		<div id="lobby_list_status">No lobbies. Please create one.</div>
+
+		<br>
+
+		<h3>Create Your Own Lobby</h3>
+		<br>
+		<form id="create_lobby" action="">
+			<table>
+				<tr>
+					<td><label class="create_lobby" for="lobby_name_input">Lobby Name: </label></td>
+					<td><input class="create_lobby" placeholder="Lobby Name" id="lobby_name_input" type="text"></input></td>
+				</tr>
+				<tr>
+					<td><label class="create_lobby" for="lobby_size_input">Size (between 3 and 6): </label></td>
+					<td><input class="create_lobby" type="number" id="lobby_size_input" value="6" min="3" max="6"></td>
+				</tr>
+				<tr>
+					<td><label class="create_lobby" for="lobby_privacy_input">Private: </label></td>
+					<td><input class="create_lobby" type="checkbox" id="lobby_privacy_input"></td>
+				</tr>
+			</table>
+			<br>
+			<button class="create_lobby" id="create_lobby_button">Create Lobby</button>			
+		</form>
+		<div id="lobby_name_taken"></div>
+
+	</div>
+
+
+
 	
 
 	<div id="lobby" class="lobby">
-		<h2 class="lobby" id="games">People in Lobby:</h2>
+		<h3 id="lobby_players_list"></h3>
 		<br>
 		
 		<div id="users_div">
@@ -36,9 +84,10 @@
 		
 		
 		<br>
-		<button id="start_game" class="lobby">Start Game</button>
+		<button id="start_game">Start Game</button>
 		<label for="start_game" id="start_game_label"></label>
-	
+		<br>
+		<button id="leave_lobby">Leave Lobby</button>
 	</div>
 
 
@@ -144,6 +193,5 @@
 			<option value="rook">Rook</option>
 		</select>
 	</div>
-
 	</body>
 </html>

@@ -1,23 +1,29 @@
 const express = require('express');
 const app = express();
 const path = require('path');
+
 var http = require('http').createServer(app);
 var io = require('socket.io')(http);
-var users = [];
+
 const suits = ["red", "yellow", "black", "green"];
 const values = ["1","5","6","7","8","9","10","11","12","13","14"];
+
+var users = [];
+var lobbies = [];
+
 var game;
 let numUsers = 0;
 
-// Routing
-//trying a class
+
+
 class Card{
 	constructor(value, suit){
 		this.value = value;
 		this.suit = suit;
 	}
 }
-//console.log(new Card("red","1").value);
+
+
 class Deck{
 	constructor(suits, values){
 		this.cards = new Array();
@@ -46,13 +52,6 @@ class Deck{
 		}
 	}
 }
-// console.log("unshuffled");
-// var deck = new Deck(suits,values);
-// console.dir(deck);
-// console.log("shuffled:");
-// deck.shuffle();
-// console.dir(deck);
-
 
 
 class Player{
@@ -350,35 +349,91 @@ class Game{
 	}
 }
 
+class Lobby{
+	constructor(lobby_name, lobby_capacity, lobby_privacy){
+		this.name = lobby_name;
+		this.capacity = lobby_capacity;
+		this.private = lobby_privacy;
+		this.participants = [];
+		this.state = "Waiting for more players";
+		this.game;
+		this.updatePrelobby();
+	}
 
-// function beatsPrevValue(incumbent, newVal){
-// 	if (incumbent == 1){
-// 		return false;
-// 	} else if (newVal == 1){
-// 		return true;
-// 	}else if(incumbent == "rook"){
-// 		return true;
-// 	}else if(newVal == "rook"){
-// 		return false;
-// 	}else if (newVal > incumbent){
-// 		return true;
-// 	}else{
-// 		return false;
-// 	}
-// }
+	addParticipant(user){
+		this.participants.push(user);
+		this.updatePrelobby();
+		this.updateParticipants();
+	}
 
-// function trickContainsTrump () {
+	removeParticipant(user){
+		for (var i = 0; i < this.participants.length; i++){
+			if (this.participants[i].sid == user.sid){
+				this.participants.splice(i, 1);
+				this.updatePrelobby();
+				this.updateParticipants();
+			}
+		}
 
+		//remove lobby if there are no more participants
+		if (this.participants.length == 0){
+			console.log("all players have left lobby \"" + this.name + "\". Removing it from lobbies list.")
+			this.destroyLobby();
+		}
+	}
 
-// }
+	updatePrelobby(){
+		io.to('prelobby').emit('lobby list', {
+			lobbies: lobbies
+		});
+	}
 
-function sendPlayedCard(){
+	updateParticipants(){
+		io.to(this.name).emit('new player in lobby', {
+			numUsers: this.participants.length,
+			users: this.participants
+		});
+	}
 
-
-
-
-
+	destroyLobby(){
+		lobbies.splice(findLobbyIndex(this.name), 1);
+		this.updatePrelobby();
+		this.updateParticipants();
+	}
 }
+
+//finds user from socketID
+function findUser(socketID){
+	var user = null;
+	for (var i = 0; i < users.length; i++){
+		if (users[i].sid == socketID){
+			user = users[i];
+		}
+	}
+	return user;
+}
+
+//finds lobby from lobby name
+function findLobby(lobby_name){
+	var lobby = null;
+	for (var i = 0; i < lobbies.length; i++){
+		if (lobbies[i].name == lobby_name){
+			lobby = lobbies[i]
+		}
+	}
+	return lobby;
+}
+
+//find lobby index from lobby name
+function findLobbyIndex(lobby_name){
+	for (var i = 0; i < lobbies.length; i++){
+		if (lobbies[i].name == lobby_name){
+			return i;
+		}
+	}
+}
+
+
 
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -386,8 +441,42 @@ io.on('connection', (socket) => {
 	let addedUser = false;
 	console.log('a user connected');
   
+	//Login
+	socket.on('login', (username) => {
+		if (addedUser) return;
+
+
+		var nameInUse = false;
+		for (var i = 0; i < users.length; i++){
+			if (users[i].username == username){
+				nameInUse = true;
+				socket.emit('name in use');
+			}
+		}
+
+		if (!nameInUse){
+			
+			//send user to prelobby
+			console.log("sending " + username + " to prelobby");
+			socket.join('prelobby');
+
+			// we store the username in the socket session for this client
+			socket.username = username; //I uncommented this because it's how the chat is getting the username without needing to compare it to the array of users.
+		
+			users.push(new Player(socket.id, username));
+			console.log("adding " + username + " to users list");
+			numUsers++;
+			
+			addedUser = true;
+			socket.emit('name accepted');
+
+			socket.emit('lobby list', {
+				lobbies: lobbies
+			});
+		}
+	});
 	
-	
+	//logout/disconnect
 	socket.on('disconnect', () => {
 		console.log('user disconnected');
 		
@@ -396,7 +485,7 @@ io.on('connection', (socket) => {
 		//remove user from users list
 		for( var i = 0; i < users.length; i++){ 
                                    
-			if ( users[i].sid === socket.id) { 
+			if (users[i].sid === socket.id) { 
 				users.splice(i, 1); 
 				i--; 
 			}
@@ -413,56 +502,110 @@ io.on('connection', (socket) => {
 	});
 
 
+	//Lobby handling
+	// when the client emits 'lobby list', this returns a list of the lobbies. Add support to return only non-private lobbies.
+	socket.on('lobby list request', () => {
+		socket.emit('lobby list', {
+			lobbies: lobbies
+		});
+	});
 
-  // when the client emits 'add user', this listens and executes
-	socket.on('add user', (username) => {
-		if (addedUser) return;
-
-		var nameInUse = false;
-
-		for (var i = 0; i < users.length; i++){
-			if (users[i].username == username){
-				console.log("name in use");
-				nameInUse = true;
-				//potentially alert user about this
+	//client creates a new lobby
+	socket.on('create lobby', (data) => {
+		console.log("creating lobby name: " + data.lobby_name);
+		var taken = false;
+		for (var i = 0; i < lobbies.length; i++){
+			if (lobbies[i].name == data.lobby_name){
+				console.log("a user attempted to create a lobby with a name that was already taken");
+				socket.emit('lobby name taken');
+				taken = true;
+				continue;
 			}
 		}
 
-		if (nameInUse){
-			
-			socket.emit('name in use', {
-			});
-			
-		}else{
-		
-			// we store the username in the socket session for this client
-			socket.username = username; //I uncommented this because it's how our chat is getting the username without needing to compare it to the array of users.
-		
-			users.push(new Player(socket.id, username));
-			console.log("adding " + username + " to users list");
-			numUsers++;
-			
-			addedUser = true;
-			
-			io.emit('login', {
-				username: username,
-				numUsers: numUsers,
-				users: users
-			});
-			
-			socket.emit('name accepted', {
-			});
+		if (!taken){
+			console.log("creating lobby");
+			lobbies.push(new Lobby(data.lobby_name, data.lobby_size, data.lobby_privacy));
+			socket.emit("lobby created");
 		}
-		
+
 	});
 
 
+	//client joins a lobby
+	socket.on('join lobby', (lobby_name) => {
+
+		var user = findUser(socket.id);
+		var foundUser = ((user) ? true : false);
+
+
+		if (foundUser){
+
+			var lobby = findLobby(lobby_name);
+			var foundLobby = ((lobby) ? true : false);
+
+			if (foundLobby){
+
+				console.dir(lobby);
+
+				socket.leave('prelobby');
+				socket.join(lobby.name);
+				socket.lobby = lobby; //will this work?
+
+				lobby.addParticipant(user);
+
+				socket.emit('sent to lobby', {
+					name: lobby.name,
+					privacy: lobby.private,
+					capacity: lobby.capacity
+				});
+	
+
+	
+			}else{
+				console.log("lobby not found")	;
+			}
+		}else{
+			console.log("user not found");
+		}
+
+	});
+
+	//client leaves a lobby. Client sends the lobby_name. potential for problems from this.
+	socket.on('leave lobby', (lobby_name) => {
+
+		var user = findUser(socket.id);
+		var foundUser = ((user) ? true : false);
+
+
+		if (foundUser) {
+
+			var lobby = findLobby(lobby_name);
+			var foundLobby = ((lobby) ? true : false);
+
+			if (foundLobby) {
+
+				socket.emit('sent to prelobby');
+
+				socket.leave(lobby.name);
+				socket.join('prelobby');
+				socket.lobby = undefined;
+
+				lobby.removeParticipant(user);
+
+			} else {
+				console.log("lobby not found");
+			}
+		} else {
+			console.log("user not found");
+		}
+
+	});
+
 	socket.on('start game', () => {
 		console.log('Game is starting');
-	
-		//setup game class
-		game = new Game(users);
-		game.startGame();
+		socket.lobby.game = new Game(socket.lobby.participants);
+		socket.lobby.game.startGame();
 		
 	});
 	
@@ -922,8 +1065,22 @@ io.on('connection', (socket) => {
 
 
 	socket.on('chat message', (msg) => {
-		io.emit('chat message', socket.username + ": " + msg);
-		console.log(socket.username + ": " + msg);
+		//find player from socket id
+		var user = findUser(socket.id);
+		var rooms = socket.rooms;
+		if (user){
+			for (let room of rooms){
+				if (room != socket.id){
+					io.to(room).emit('chat message', socket.username + ": " + msg);
+					console.log(socket.username + ": " + msg + ". In room: "+ room);
+				}
+			}
+		}
+
+		
+
+
+
 	});
 
 });

@@ -117,10 +117,21 @@ a:hover{
 	cursor: pointer;
 }
 
+#lobbies_table, #lobbies_table th, #lobbies_table td  {
+	border: 1px solid black;
+	border-collapse: collapse;
+}
 
 
+th, td {
+	padding: 5px;
+	text-align: left;    
+}
 
 
+#page_title{
+	margin: 20px;
+}
 
 
 #messaging_div{
@@ -145,8 +156,8 @@ ul {
 
 .lobby
 {
+	margin: 20px;
 	display: none;
-	
 }
 
 .messaging
@@ -154,10 +165,18 @@ ul {
 	display: none;
 }
 	
-#kitty_selection {
+#lobby_selection {
+	margin: 20px;
 	display: none;
 }
 
+#sign_in_div {
+	margin: 20px;
+}
+
+#kitty_selection {
+	display: none;
+}
 .template {
 	display: none;
 }

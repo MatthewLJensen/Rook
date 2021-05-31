@@ -12,13 +12,88 @@ $(function () {
 	var playingCard = false;
 	var bidding = true;
 
-	$('#join_lobby').submit(function(e){
+	//lobby vars
+	var lobby_name;
+	var lobby_size;
+	var lobby_privacy;
+
+	$( document ).ready(function() {
+		//runs when page first loads. Pulls list of lobbies
+		//socket.emit('lobby list request');
+	});
+
+	$('#sign_in').submit(function(e){
 		e.preventDefault(); // prevents page reloading
 			//tell server the username
 			username = $('#name_input').val().trim();
-			socket.emit('add user', username);
-		
+			socket.emit('login', username);
+
+			//display proper divs
+			$('#sign_in_div').hide();
+			$('#lobby_selection').show();
+
 	});
+
+	socket.on('lobby list', function(data){
+		if(data.lobbies.length > 0){
+			console.dir(data.lobbies);
+			$('#lobby_list_status').hide();
+			$('#lobbies_table').show();
+			update_lobbies(data.lobbies);
+
+		}else{
+			console.log("no lobbies, not displaying lobby list.")
+			$('#lobby_list_status').show();
+			$('#lobbies_table').hide();
+		}
+	});
+
+	socket.on('lobby name taken', function(){
+		console.log("lobby name taken");
+		document.getElementById("lobby_name_taken").innerHTML = "Lobby name already taken. Please try again with another name";
+	});
+
+	$('#create_lobby').submit(function(e){
+		e.preventDefault(); // prevents page reloading
+
+		//clear alerts
+		document.getElementById("lobby_name_taken").innerHTML = "";
+
+		console.log("creating lobby");
+		lobby_name = $('#lobby_name_input').val().trim();
+		lobby_size = $('#lobby_size_input').val();
+		lobby_privacy = $('#lobby_privacy_input').is(":checked");
+
+		socket.emit('create lobby', {
+			lobby_name: lobby_name,
+			lobby_size: lobby_size,
+			lobby_privacy: lobby_privacy
+		});
+
+	});
+
+	//using a callback from the server, rather than immedietely joining a lobby after created above enables us to prevent a user from joining a lobby that has already been created when they try to create the same lobby.
+	socket.on('lobby created', function () {
+		socket.emit('join lobby', lobby_name);
+	});
+
+	//I had to use document jquery selector to be able to access these appended items
+	$(document).on('click', "#join_lobby", function() {
+		console.log("joining lobby: " + $(this).attr("value"))
+		socket.emit('join lobby', $(this).attr("value"));
+	});
+
+	$(document).on('click', "#spectate_lobby", function() {
+		console.log("spectating lobby. Not currently implemented.");
+		socket.emit('spectate lobby', $(this).attr("value"));
+	});
+		
+	$('#leave_lobby').click(function(){
+		//Tell the server we're leaving the lobby
+		socket.emit('leave lobby', lobby_name);
+	});
+
+
 
 	$('#start_game').click(function(){
 			//Tell the server to setup/start the game
@@ -214,15 +289,43 @@ $(function () {
 
 	socket.on('name accepted', function(){
 		console.dir("Name accepted");
-
-		
-		if (username){
-			$('.username').hide();
-			$('.lobby').show();
-			$('.messaging').show();
-		}
 		
 	});
+
+	socket.on('sent to prelobby', function () {
+		console.dir("being sent to lobby");
+
+		lobby_name = undefined;
+		lobby_size = undefined;
+		lobby_privacy = undefined;
+
+		$('.lobby').hide();
+		$('.messaging').hide();
+		$('#lobby_selection').show();
+		$('#lobby_players_list').text("");
+
+
+	});
+
+	socket.on('sent to lobby', function (lobby) {
+		console.dir("being sent to lobby");
+
+		lobby_name = lobby.name;
+		lobby_size = lobby.capacity;
+		lobby_privacy = lobby.privacy;
+
+
+		$('.username').hide();
+		$('#lobby_selection').hide();
+		$('.lobby').show();
+		$('.messaging').show();
+
+		$('#lobby_players_list').text("Players List for " + lobby_name);
+
+
+	});
+
+
 	
 	
 	socket.on('name in use', function(){
@@ -249,7 +352,7 @@ $(function () {
 		//make it on the right side of the screen
 	});
 	
-	socket.on('login', function(data){
+	socket.on('new player in lobby', function(data){
 		console.dir("New player. Total: " + data.numUsers);
 
 		update_users(data.users);
@@ -571,6 +674,7 @@ $(function () {
 		$('.playing_area').hide();
 	});
 	
+
 	
 	const update_player = (order, myUsername, turn) => {
 		
@@ -582,7 +686,7 @@ $(function () {
 		
 		if (currentPlayer == myUsername){
 			//indicate it is my turn
-//			$('#bid_action').prop("disabled",false);
+			//$('#bid_action').prop("disabled",false);
 			
 			
 
@@ -603,7 +707,7 @@ $(function () {
 			
 		}else{
 			//indicate it is not my turn
-//			$('#bid_action').prop("disabled",true);
+			//$('#bid_action').prop("disabled",true);
 			
 			console.log("It is not my turn to play a card");
 			turn_notifier.innerHTML = "";
@@ -702,6 +806,7 @@ $(function () {
 		}
 	}
 
+	
 	const display_cards = (cards) => {
 		var cards_div = document.getElementById('cards_div');
 		cards_div.innerHTML = "";
@@ -745,7 +850,55 @@ $(function () {
 
 	}
 
-	
+	const update_lobbies = (lobbies) => {
+		var lobbies_table = document.getElementById('lobbies_table');
+		lobbies_table.innerHTML = "";
+
+		console.dir(lobbies);
+
+		$("#lobbies_table").append("<tr>" + 
+		"<th>" + "Name" + "</th>" +
+		"<th>" + "Participants" + "</th>" +
+		"<th>" + "Current State " + "</th>" +
+		"<th>" + "Actions" + "</th>" +
+		"</tr>");
+
+		for (var i = 0; i < lobbies.length; i++){
+
+			console.log("looping");
+
+			$("#lobbies_table").append("<tr>" + 
+			"<td>" + lobbies[i].name + "</td>" +
+			"<td>" + lobbies[i].participants.length + "/" + lobbies[i].capacity + "</td>" +
+			"<td>" + lobbies[i].state + "</td>" +
+			"<td>" + "<button id=\"join_lobby\" value=\"" + lobbies[i].name + "\">Join</button>" + " | " + "<button id=\"spectate_lobby\" value=\"" + lobbies[i].name + "\">Spectate</button>" + "</td>" +
+			"</tr>");
+
+		}
+
+		//lobbies_div.style.display='none';
+		//lobbies_div.offsetHeight; // no need to store this anywhere, the reference is enough
+		//lobbies_div.style.display='block';
+
+
+		/*
+		var list = document.createElement('ul');
+
+		for (var i = 0; i < lobbies.length; i++){
+			lobbies_div.ap
+			// Create the list item:
+			var item = document.createElement('li');
+
+			// Set its contents:
+			item.appendChild(document.createTextNode(lobbies[i].lobby_name));
+
+			// Add it to the list:
+			list.appendChild(item);	
+		}
+
+		lobbies_div.appendChild(list);*/
+	}
+
 	// Updates users list
 	const update_users = (users) => {
 		
@@ -777,7 +930,7 @@ $(function () {
 			start_game_label.innerHTML = "You have too few players. A minimum of 3 is required. You currently have " + users.length + ".";
 		}else{
 			document.getElementById('start_game').disabled = true;
-			start_game_label.innerHTML = "You have too many players. The maximum number of players is 6. You currently have " + users.length + ".";
+			start_game_label.innerHTML = "You have too many players. The maximum number of players is " + lobby_size + ". You currently have " + users.length + ".";
 		}
 
 	}
@@ -810,5 +963,17 @@ $(function () {
 		console.dir("Player left. Total: " + data.numUsers);
 		update_users(data.users);
 	});
+
+
+	//Handle states by showing or hiding elements
+	const display_lobby_selection = () => {
+
+	}
+
+	$.fn.redraw = function(){
+		$(this).each(function(){
+		  var redraw = this.offsetHeight;
+		});
+	  };
 });
 
