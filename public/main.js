@@ -1,6 +1,91 @@
 /*
 Edited by Matthew on December 2, 2020
 */
+
+//FirebaseUI Stuff
+var firebaseConfig = {
+	apiKey: "AIzaSyABvNimuYmEwwlKqxFthpA1qEv7MqGdToI",
+	authDomain: "rook-37dd0.firebaseapp.com",
+	projectId: "rook-37dd0",
+	storageBucket: "rook-37dd0.appspot.com",
+	messagingSenderId: "277513361139",
+	appId: "1:277513361139:web:f70687497e8b9ee87d8986",
+	measurementId: "G-1B52YEY4ZL"
+};
+
+var uiConfig = {
+    callbacks: {
+        signInSuccessWithAuthResult: function (authResult, redirectUrl) {
+            // User successfully signed in.
+            // Return type determines whether we continue the redirect automatically
+            // or whether we leave that to developer to handle.
+            return false;
+        },
+        uiShown: function () {
+            // The widget is rendered.
+            // Hide the loader.
+            document.getElementById('loader').style.display = 'none';
+        }
+    },
+    // Will use popup for IDP Providers sign-in flow instead of the default, redirect.
+    signInFlow: 'popup',
+    //signInSuccessUrl: '<url-to-redirect-to-on-success>',
+    signInOptions: [
+        // Leave the lines as is for the providers you want to offer your users.
+        firebase.auth.EmailAuthProvider.PROVIDER_ID,
+    ]
+    // Terms of service url.
+    //tosUrl: '<your-tos-url>',
+    // Privacy policy url.
+    //privacyPolicyUrl: '<your-privacy-policy-url>'
+};
+
+firebase.initializeApp(firebaseConfig);
+
+var ui = new firebaseui.auth.AuthUI(firebase.auth());
+
+initApp = function () {
+    firebase.auth().onAuthStateChanged(function (user) {
+        if (user) {
+            // User is signed in.
+            var displayName = user.displayName;
+            var email = user.email;
+            var emailVerified = user.emailVerified;
+            var photoURL = user.photoURL;
+            var uid = user.uid;
+            var phoneNumber = user.phoneNumber;
+            var providerData = user.providerData;
+            user.getIdToken().then(function (accessToken) {
+                document.getElementById('sign-in-status').textContent = 'Signed in';
+                document.getElementById('sign-in').textContent = 'Sign out';
+                document.getElementById('account-details').textContent = JSON.stringify({
+                    displayName: displayName,
+                    email: email,
+                    emailVerified: emailVerified,
+                    phoneNumber: phoneNumber,
+                    photoURL: photoURL,
+                    uid: uid,
+                    accessToken: accessToken,
+                    providerData: providerData
+                }, null, '  ');
+            });
+        } else {
+            // User is signed out.
+            document.getElementById('sign-in-status').textContent = 'Signed out';
+            document.getElementById('sign-in').textContent = 'Sign in';
+            document.getElementById('account-details').textContent = 'null';
+
+            // Initialize Firebase
+
+
+            ui.start('#firebaseui-auth-container', uiConfig);
+        }
+    }, function (error) {
+        console.log(error);
+    });
+};
+
+
 $(function () {
 	var socket = io();
 	var username;
@@ -18,8 +103,7 @@ $(function () {
 	var lobby_privacy;
 
 	$( document ).ready(function() {
-		//runs when page first loads. Pulls list of lobbies
-		//socket.emit('lobby list request');
+		initApp();
 	});
 
 	$('#sign_in').submit(function(e){
@@ -27,12 +111,12 @@ $(function () {
 			//tell server the username
 			username = $('#name_input').val().trim();
 			socket.emit('login', username);
-
-			//display proper divs
-			$('#sign_in_div').hide();
-			$('#lobby_selection').show();
-
 	});
+
+
+
+
+
 
 	socket.on('lobby list', function(data){
 		if(data.lobbies.length > 0){
@@ -93,6 +177,14 @@ $(function () {
 		socket.emit('leave lobby', lobby_name);
 	});
 
+	//not finished
+	$('#sign-out').click(function(){
+		
+		firebase.auth().signOut();
+
+		//tell server we're signing out
+		
+	});
 
 
 	$('#start_game').click(function(){
@@ -289,7 +381,17 @@ $(function () {
 
 	socket.on('name accepted', function(){
 		console.dir("Name accepted");
+		//display proper divs
+		$('#sign_in_div').hide();
+		$('#lobby_selection').show();
 		
+		//reset username taken div
+		document.getElementById("username_taken").innerHTML = "";
+	});
+
+	socket.on('name in use', function(){
+		console.dir("That name is already in use, please choose another.");
+		document.getElementById("username_taken").innerHTML = "Name already taken. Please try again with another name";
 	});
 
 	socket.on('sent to prelobby', function () {
@@ -325,13 +427,6 @@ $(function () {
 
 	});
 
-
-	
-	
-	socket.on('name in use', function(){
-		console.dir("That name is already in use, please choose another.");
-	});
-	
 	
 	$('#send_message').submit(function(e){
 		e.preventDefault(); // prevents page reloading
@@ -339,7 +434,6 @@ $(function () {
 		$('#m').val('');
 		return false;
 	});
-	
 
 	socket.on('chat message', function(msg){
 		
@@ -963,17 +1057,12 @@ $(function () {
 		console.dir("Player left. Total: " + data.numUsers);
 		update_users(data.users);
 	});
-
+ 
 
 	//Handle states by showing or hiding elements
 	const display_lobby_selection = () => {
 
 	}
 
-	$.fn.redraw = function(){
-		$(this).each(function(){
-		  var redraw = this.offsetHeight;
-		});
-	  };
 });
 

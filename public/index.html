@@ -2,7 +2,23 @@
 <html>
   <head>
 	<link rel="stylesheet" href="main.css">
-    <title>Rook</title>
+
+	<!-- Firebase -->
+	<script src="https://www.gstatic.com/firebasejs/ui/4.8.0/firebase-ui-auth.js"></script>
+    <link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/4.8.0/firebase-ui-auth.css" />
+
+	<!-- Firebase App (the core Firebase SDK) is always required and must be listed first -->
+	<script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-app.js"></script>
+
+	<!-- If you enabled Analytics in your project, add the Firebase SDK for Analytics -->
+	<script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-analytics.js"></script>
+
+	<!-- Add Firebase products that you want to use -->
+	<script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-auth.js"></script>
+	<script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-firestore.js"></script>
+
+
+<title>Rook</title>
 
   </head>
   <body>
@@ -13,11 +29,19 @@
 	<script src="https://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.10.1/Sortable.min.js"></script>
 	<script src="main.js"></script>
+
+
 	
 	<h1 id="page_title">Rook</h1>
 	
 
 	<div id="sign_in_div">
+		<div id="firebaseui-auth-container"></div>
+		<div id="loader">Loading...</div>
+		<div id="sign-in-status"></div>
+		<div id="sign-in"></div>
+		<pre id="account-details"></pre>
+		<button id="sign-out">Sign Out</button>
 	
 		<form id="sign_in" action="">
 			<label class="username" for="name_input">Enter Your Name</label>
@@ -193,5 +217,7 @@
 			<option value="rook">Rook</option>
 		</select>
 	</div>
+
+
 	</body>
 </html>
