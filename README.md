@@ -13,7 +13,7 @@
 * Server side verification to prevent cheating
  
 ## Play Rook
- You can access the version I have hosted on Heroku. [Play Rook online here.](https://rook.matthewljensen.com)
+ You can access the version I have hosted on Heroku. [Play Rook online here.](http://rook.matthewljensen.com)
 
 
 ## Screenshots and Gifs
