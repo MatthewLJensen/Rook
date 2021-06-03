@@ -2,93 +2,50 @@
 Edited by Matthew on December 2, 2020
 */
 
-//FirebaseUI Stuff
-var firebaseConfig = {
-	apiKey: "AIzaSyABvNimuYmEwwlKqxFthpA1qEv7MqGdToI",
-	authDomain: "rook-37dd0.firebaseapp.com",
-	projectId: "rook-37dd0",
-	storageBucket: "rook-37dd0.appspot.com",
-	messagingSenderId: "277513361139",
-	appId: "1:277513361139:web:f70687497e8b9ee87d8986",
-	measurementId: "G-1B52YEY4ZL"
-};
-
-var uiConfig = {
-    callbacks: {
-        signInSuccessWithAuthResult: function (authResult, redirectUrl) {
-            // User successfully signed in.
-            // Return type determines whether we continue the redirect automatically
-            // or whether we leave that to developer to handle.
-            return false;
-        },
-        uiShown: function () {
-            // The widget is rendered.
-            // Hide the loader.
-            document.getElementById('loader').style.display = 'none';
-        }
-    },
-    // Will use popup for IDP Providers sign-in flow instead of the default, redirect.
-    signInFlow: 'popup',
-    //signInSuccessUrl: '<url-to-redirect-to-on-success>',
-    signInOptions: [
-        // Leave the lines as is for the providers you want to offer your users.
-        firebase.auth.EmailAuthProvider.PROVIDER_ID,
-    ]
-    // Terms of service url.
-    //tosUrl: '<your-tos-url>',
-    // Privacy policy url.
-    //privacyPolicyUrl: '<your-privacy-policy-url>'
-};
-
-firebase.initializeApp(firebaseConfig);
-
-var ui = new firebaseui.auth.AuthUI(firebase.auth());
-
-initApp = function () {
-    firebase.auth().onAuthStateChanged(function (user) {
-        if (user) {
-            // User is signed in.
-            var displayName = user.displayName;
-            var email = user.email;
-            var emailVerified = user.emailVerified;
-            var photoURL = user.photoURL;
-            var uid = user.uid;
-            var phoneNumber = user.phoneNumber;
-            var providerData = user.providerData;
-            user.getIdToken().then(function (accessToken) {
-                document.getElementById('sign-in-status').textContent = 'Signed in';
-                document.getElementById('sign-in').textContent = 'Sign out';
-                document.getElementById('account-details').textContent = JSON.stringify({
-                    displayName: displayName,
-                    email: email,
-                    emailVerified: emailVerified,
-                    phoneNumber: phoneNumber,
-                    photoURL: photoURL,
-                    uid: uid,
-                    accessToken: accessToken,
-                    providerData: providerData
-                }, null, '  ');
-            });
-        } else {
-            // User is signed out.
-            document.getElementById('sign-in-status').textContent = 'Signed out';
-            document.getElementById('sign-in').textContent = 'Sign in';
-            document.getElementById('account-details').textContent = 'null';
-
-            // Initialize Firebase
-
-
-            ui.start('#firebaseui-auth-container', uiConfig);
-        }
-    }, function (error) {
-        console.log(error);
-    });
-};
-
-
 $(function () {
+
+	//FirebaseUI Stuff
+	var firebaseConfig = {
+		apiKey: "AIzaSyABvNimuYmEwwlKqxFthpA1qEv7MqGdToI",
+		authDomain: "rook-37dd0.firebaseapp.com",
+		projectId: "rook-37dd0",
+		storageBucket: "rook-37dd0.appspot.com",
+		messagingSenderId: "277513361139",
+		appId: "1:277513361139:web:f70687497e8b9ee87d8986",
+		measurementId: "G-1B52YEY4ZL"
+	};
+	
+	var uiConfig = {
+		callbacks: {
+			signInSuccessWithAuthResult: function (authResult, redirectUrl) {
+				// User successfully signed in.
+				// Return type determines whether we continue the redirect automatically
+				// or whether we leave that to developer to handle.
+				return false;
+			},
+			uiShown: function () {
+				// The widget is rendered.
+				// Hide the loader.
+				document.getElementById('loader').style.display = 'none';
+			}
+		},
+		// Will use popup for IDP Providers sign-in flow instead of the default, redirect.
+		signInFlow: 'popup',
+		//signInSuccessUrl: '<url-to-redirect-to-on-success>',
+		signInOptions: [
+			// Leave the lines as is for the providers you want to offer your users.
+			firebase.auth.EmailAuthProvider.PROVIDER_ID,
+		]
+		// Terms of service url.
+		//tosUrl: '<your-tos-url>',
+		// Privacy policy url.
+		//privacyPolicyUrl: '<your-privacy-policy-url>'
+	};
+
+	//Global Vars
 	var socket = io();
 	var username;
+	var uid;
 	var player;
 	var numCardsSelected = 0;
 	var selectingKitty = false;
@@ -102,22 +59,89 @@ $(function () {
 	var lobby_size;
 	var lobby_privacy;
 
+
 	$( document ).ready(function() {
-		initApp();
+
+		firebase.initializeApp(firebaseConfig);
+		
+		//uncomment later
+		//firebase.analytics();
+
+		var ui = new firebaseui.auth.AuthUI(firebase.auth());
+
+		initApp = function () {
+			firebase.auth().onAuthStateChanged(function (user) {
+
+				//hide sign-out button
+				document.getElementById('sign-out').style.display = "none";
+
+				if (user) {
+					// User is signed in.
+
+					//display sign out button.
+					document.getElementById('sign-out').style.display = "block";
+					document.getElementById('loader').style.display = 'none';
+
+					username = user.displayName;
+					uid = user.uid;
+
+					socket.emit('login', {
+						username: username,
+						uid: uid
+					});
+
+					// var email = user.email;
+					// var emailVerified = user.emailVerified;
+					// var photoURL = user.photoURL;
+
+					// var phoneNumber = user.phoneNumber;
+					// var providerData = user.providerData;
+
+					// user.getIdToken().then(function (accessToken) {
+					// 	console.dir(JSON.stringify({
+					// 		displayName: displayName,
+					// 		email: email,
+					// 		emailVerified: emailVerified,
+					// 		phoneNumber: phoneNumber,
+					// 		photoURL: photoURL,
+					// 		uid: uid,
+					// 		accessToken: accessToken,
+					// 		providerData: providerData
+					// 	}, null, '  '));
+					// });
+
+				} else {
+					// Initialize Firebase
+					ui.start('#firebaseui-auth-container', uiConfig);
+				}
+			}, function (error) {
+				console.log(error);
+			});
+		};
+		window.addEventListener('load', function () {
+			initApp();
+		});
 	});
 
-	$('#sign_in').submit(function(e){
-		e.preventDefault(); // prevents page reloading
-			//tell server the username
-			username = $('#name_input').val().trim();
-			socket.emit('login', username);
+	// $('#sign_in').submit(function(e){
+	// 	e.preventDefault(); // prevents page reloading
+	// 		//tell server the username
+	// 		username = $('#name_input').val().trim();
+
+	// });
+
+	$('#sign-out').click(function(){
+		
+		console.log("signing out");
+		firebase.auth().signOut();
+		location.reload();
+
+		//tell server we're signing out
+		
 	});
 
 
-
-
-
-
+	//Pre Lobby
 	socket.on('lobby list', function(data){
 		if(data.lobbies.length > 0){
 			console.dir(data.lobbies);
@@ -172,19 +196,14 @@ $(function () {
 		socket.emit('spectate lobby', $(this).attr("value"));
 	});
 		
+
+	//Lobby
 	$('#leave_lobby').click(function(){
 		//Tell the server we're leaving the lobby
 		socket.emit('leave lobby', lobby_name);
 	});
 
-	//not finished
-	$('#sign-out').click(function(){
-		
-		firebase.auth().signOut();
 
-		//tell server we're signing out
-		
-	});
 
 
 	$('#start_game').click(function(){
@@ -382,16 +401,15 @@ $(function () {
 	socket.on('name accepted', function(){
 		console.dir("Name accepted");
 		//display proper divs
-		$('#sign_in_div').hide();
+		//$('#sign_in_div').hide();
 		$('#lobby_selection').show();
 		
 		//reset username taken div
-		document.getElementById("username_taken").innerHTML = "";
+		//document.getElementById("username_taken").innerHTML = "";
 	});
 
-	socket.on('name in use', function(){
-		console.dir("That name is already in use, please choose another.");
-		document.getElementById("username_taken").innerHTML = "Name already taken. Please try again with another name";
+	socket.on('already signed in', function(){
+		console.dir("user already signed in. Getting current details");
 	});
 
 	socket.on('sent to prelobby', function () {
@@ -454,6 +472,12 @@ $(function () {
 		console.dir(data);
 	});
 	
+	socket.on('rejoin game', function(data){
+		//Hide Lobby
+		$('.lobby').hide();
+		$('.playing_area').show();
+		$('#bidding_div').show();
+	});
 
 	socket.on('start bidding', function(data){
 		//Hide Lobby

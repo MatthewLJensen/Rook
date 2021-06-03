@@ -1,7 +1,7 @@
 {
-  "name": "login",
+  "name": "rook",
   "version": "0.0.1",
-  "description": "my first socket.io app",
+  "description": "rook online game",
   "dependencies": {
     "express": "^4.17.1",
     "express-session": "^1.17.1",
@@ -9,10 +9,14 @@
     "socket.io": "^3.0.3",
     "sortablejs": "^1.12.0"
   },
-  "main": "login.js",
+  "engines": {
+    "node": "14.15.1"
+  },
+  "main": "index.js",
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",

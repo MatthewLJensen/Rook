@@ -2,6 +2,22 @@
 /*body { font: 13px Helvetica, Arial; }*/
 
 
+.header {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	align-items: center;
+}
+
+#page_title{
+	margin: 20px;
+}
+
+#sign-out {
+	margin: 20px;
+}
+
+
 #messages { list-style-type: none; margin: 0; padding: 0; }
 #messages li { padding: 5px 10px; }
 #messages li:nth-child(odd) { background: #eee; }
@@ -129,9 +145,7 @@ th, td {
 }
 
 
-#page_title{
-	margin: 20px;
-}
+
 
 
 #messaging_div{

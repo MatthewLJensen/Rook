@@ -17,6 +17,7 @@
 	<script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-auth.js"></script>
 	<script src="https://www.gstatic.com/firebasejs/8.6.2/firebase-firestore.js"></script>
 
+	<meta name="viewport" content="width=device-width">
 
 <title>Rook</title>
 
@@ -31,24 +32,27 @@
 	<script src="main.js"></script>
 
 
-	
-	<h1 id="page_title">Rook</h1>
+	<div class= "header" id="header">
+		<h1 id="page_title">Rook</h1>
+		<button id="sign-out">Sign Out</button>
+	</div>
+	<hr>
 	
 
 	<div id="sign_in_div">
 		<div id="firebaseui-auth-container"></div>
 		<div id="loader">Loading...</div>
-		<div id="sign-in-status"></div>
-		<div id="sign-in"></div>
-		<pre id="account-details"></pre>
-		<button id="sign-out">Sign Out</button>
+		
 	
+		<!---
 		<form id="sign_in" action="">
 			<label class="username" for="name_input">Enter Your Name</label>
 			<input class="username" id="name_input" type="text"></input>
 			<button class="username" id="name_input_button">Sign In</button>
 		</form>
 		<div id="username_taken"></div>
+		-->
+
 	</div>
 
 

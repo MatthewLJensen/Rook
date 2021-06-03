@@ -54,8 +54,9 @@ class Deck{
 
 
 class Player{
-	constructor(sid,username){
+	constructor(sid, uid, username){
 		this.sid = sid;
+		this.uid = uid;
 		this.username = username;
 		this.hand = [];
 		this.bid = 0;
@@ -64,6 +65,8 @@ class Player{
 		this.points = 0;
 		this.passed = false;
 		this.partner = false;
+		this.inLobby = false; //used when player reloads to find game state
+		this.inGame = false; //used when player reloads to find game state
 	}
 	addWon(wonparam){
 		for(var i = 0; i < wonparam.length; i++){
@@ -88,6 +91,7 @@ class hiddenPlayer{
 
 class Game{
 	constructor(players){
+		this.status;
 		this.players = players;
 		this.deck = new Deck(suits,values);
 		this.kitty = [];
@@ -231,8 +235,9 @@ class Game{
 			}
 			console.log(this.players[i].username + "'s final points: " + this.players[i].points)
 
-			if (this.players[i].points > 500){
+			if (this.players[i].points >= 500){
 				this.over = true;
+				this.status = "over";
 			}
 
 		}
@@ -344,6 +349,7 @@ class Game{
 					order: this.order()
 				});
 			}
+			this.status = "bidding";
 		}
 	}
 }
@@ -363,11 +369,13 @@ class Lobby{
 		this.participants.push(user);
 		this.updatePrelobby();
 		this.updateParticipants();
+		user.inLobby = true;
 	}
 
 	removeParticipant(user){
 		for (var i = 0; i < this.participants.length; i++){
-			if (this.participants[i].sid == user.sid){
+			if (this.participants[i].uid == user.uid){
+				this.participants[i].inLobby = false;
 				this.participants.splice(i, 1);
 				this.updatePrelobby();
 				this.updateParticipants();
@@ -432,6 +440,16 @@ function findLobbyIndex(lobby_name){
 	}
 }
 
+function findLobbyFromUser(uid){
+	for (var i = 0; i < lobbies.length; i++){
+		for (let j = 0; j < lobbies[i].participants.length; j++){
+			if (lobbies[i].participants[j].uid == uid){
+				return lobbies[i];
+			}
+		}
+		
+	}
+}
 
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -441,32 +459,78 @@ io.on('connection', (socket) => {
 	console.log('a user connected');
   
 	//Login
-	socket.on('login', (username) => {
+	socket.on('login', (data) => {
 
-		console.log("sid: " + socket.id);
-		
+		console.log("uid: " + data.uid);
+
 		if (addedUser) return;
 
 
-		var nameInUse = false;
+		var signedIn = false;
 		for (var i = 0; i < users.length; i++){
-			if (users[i].username == username){
-				nameInUse = true;
-				socket.emit('name in use');
+			if (users[i].uid == data.uid){
+				signedIn = true;
+				socket.emit('already signed in');
+
+				users[i].sid = socket.id;
+
+				console.log("user already in users list.")
+				console.dir(users[i]);
+				
+				//check if they're in a lobby or game
+				if (users[i].inGame){
+					console.log("user was in a game, sending them there now");
+					var lobby = findLobbyFromUser(users[i].uid);
+					if (lobby){
+						var game = lobby.game;
+						if (game){
+
+						}
+					}
+
+
+				}else if (users[i].inLobby){
+					console.log("user was in a lobby, sending them there now");
+
+					var lobby = findLobbyFromUser(users[i].uid);
+					if (lobby){
+
+						socket.leave('prelobby');
+						socket.join(lobby.name);
+						socket.lobby = lobby;
+	
+						socket.emit('sent to lobby', {
+							name: lobby.name,
+							privacy: lobby.private,
+							capacity: lobby.capacity
+						});
+
+						lobby.updateParticipants();
+
+					}else{
+						console.log("system thought user was in a lobby. We couldn't find them.");
+					}
+
+
+				}else{
+					console.log("no apparent saved state, sending them to the prelobby.")
+					signedIn = false; //this effectively accomplishes sending them to the prelobby.
+				}
+
 			}
 		}
 
-		if (!nameInUse){
+		if (!signedIn){
 			
 			//send user to prelobby
-			console.log("sending " + username + " to prelobby");
+			console.log("sending " + data.username + " to prelobby");
 			socket.join('prelobby');
 
 			// we store the username in the socket session for this client
-			socket.username = username; //I uncommented this because it's how the chat is getting the username without needing to compare it to the array of users.
+			socket.username = data.username; //I uncommented this because it's how the chat is getting the username without needing to compare it to the array of users.
 		
-			users.push(new Player(socket.id, username));
-			console.log("adding " + username + " to users list");
+			users.push(new Player(socket.id, data.uid, data.username));
+			console.log("adding " + data.username + " to users list");
 			numUsers++;
 			
 			addedUser = true;
@@ -483,23 +547,33 @@ io.on('connection', (socket) => {
 		console.log('user disconnected');
 		
 
-
-		//remove user from users list
-		for( var i = 0; i < users.length; i++){ 
-                                   
-			if (users[i].sid === socket.id) { 
-				users.splice(i, 1); 
-				i--; 
+		for (var i = 0; i < users.length; i++){
+			if (users[i].sid == socket.id){
+				console.log("user has disconnected. Here are their details.");
+				console.dir(users[i]);
 			}
 		}
+
+
+		//we need to update disconnect functionality.
+
+		//remove user from users list
+		// for( var i = 0; i < users.length; i++){ 
+                                   
+		// 	if (users[i].sid === socket.id) { 
+		// 		users.splice(i, 1); 
+		// 		i--; 
+		// 	}
+		// }
+		//numUsers--;
 		
-		numUsers--;
-		
-		io.emit('logout', {
-			username: socket.username,
-			numUsers: numUsers,
-			users: users
-		});
+
+		//
+		// io.emit('logout', {
+		// 	username: socket.username,
+		// 	numUsers: numUsers,
+		// 	users: users
+		// });
 		
 	});
 
@@ -552,7 +626,7 @@ io.on('connection', (socket) => {
 
 				socket.leave('prelobby');
 				socket.join(lobby.name);
-				socket.lobby = lobby; //will this work?
+				socket.lobby = lobby;
 
 				lobby.addParticipant(user);
 
@@ -606,6 +680,12 @@ io.on('connection', (socket) => {
 
 	socket.on('start game', () => {
 		console.log('Game is starting');
+
+		//set user states to inGame. Need to change this to false once the game is over.
+		for (let i = 0; i < socket.lobby.participants; i++){
+			socket.lobby.participants[i].inGame = true;
+		}
+
 		socket.lobby.game = new Game(socket.lobby.participants);
 		socket.lobby.game.startGame();
 		
