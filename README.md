@@ -1,10 +1,7 @@
 # Rook
  Rook Web Game built for Networking Class. Implements Socket.io, Node.js, ExpressJS, and some Firebase features.
  
-## Play Rook
- You can access the version I have hosted on Heroku. [Play Rook online here.](https://rook.matthewljensen.com)
-
-## Features
+ ## Features
 * Login with FirebaseUI
 * Dynamic lobbies to support multiple simulataneous games
 * Chat client to communicate with your lobby
@@ -14,6 +11,10 @@
 * Points in Kitty notification
 * Simple UI
 * Server side verification to prevent cheating
+ 
+## Play Rook
+ You can access the version I have hosted on Heroku. [Play Rook online here.](https://rook.matthewljensen.com)
+
 
 ## Screenshots and Gifs
 
@@ -42,7 +43,7 @@ Bidding Form (image):
 ![Lobby Creation](/Screenshots/bid%20form.png)
 
 
-##Run it on your own system
+## Run it on your own system
 ### Requirements
 Node.js
 
