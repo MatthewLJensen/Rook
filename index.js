@@ -1167,6 +1167,7 @@ io.on('connection', (socket) => {
 
 });
 
-http.listen(3001, () => {
-  console.log('listening on *:3001');
+const PORT = process.env.PORT || 3000;
+http.listen(PORT, () => {
+	console.log(`Our app is running on port ${ PORT }`);
 });
